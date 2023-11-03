@@ -3,6 +3,8 @@
         "stdio.h": "c",
         "assert.h": "c",
         "typeinfo": "c",
-        "cstdio": "c"
+        "cstdio": "c",
+        "dirent.h": "c",
+        "windows.h": "c"
     }
 }

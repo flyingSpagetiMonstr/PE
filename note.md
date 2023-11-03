@@ -1,19 +1,16 @@
 # Todos:
 
-my test payload: 
-function("printf")("Hallo, world!")
-(use fopen to do file r/w) 
+- (use fopen to do file r/w) 
 
-VS代码生成时关闭GS选项 命令行格式：/GS
-use i_nt_headers.FileHeader.SizeOfOptionalHeader?
+- VS代码生成时关闭GS选项 命令行格式：/GS
 
-- read pyaload.exe[.payload] to target.exe[.virus]
+- A
+  "mov $0x14E0, %%rax\n\t"
+  "add %[base_addr], %%rax\n\t"
+  "jmp *%%rax"
 
-- sizeofHeaders: The combined size of an MS-DOS stub, PE header, and section headers rounded up to a multiple of FileAlignment.
-- SizeOfCode
-- EntryPoint
-- BaseOfCode
-- size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment.
+- var reference
+
 
 - PE.c:208:8: warning: passing argument 1 of 'io' from incompatible pointer type [-Wincompatible-pointer-types]
     208 |     io(WriteFile, payload_info.payload, payload_info.size, file, FILE_BEGIN, sect_end);
@@ -61,8 +58,10 @@ gcc -g(include debugging information)
   ```
 
 # Stalled
-whether call_puts/syscall can be "PIC"
-learn about syscall (better from sth like books)
+- use i_nt_headers.FileHeader.SizeOfOptionalHeader(?)
+
+- whether call_puts/syscall can be "PIC"
+- learn about syscall (better from sth like books)
 
 # note
 - when using GetStdHandle to print, freopen doesn't work (the message will be lost).
@@ -73,3 +72,10 @@ learn about syscall (better from sth like books)
   ```
 - Assertion failed: i_dos_header.e_lfanew == sizeof(i_dos_header), file PE.c, line 81
 - can't read from gs:0(thread_env_block)
+
+# var reference
+- sizeofHeaders: The combined size of an MS-DOS stub, PE header, and section headers rounded up to a multiple of FileAlignment.
+- SizeOfCode
+- EntryPoint
+- BaseOfCode
+- size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment.

