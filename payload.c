@@ -4,12 +4,12 @@
 #include <string.h>
 #include <Windows.h>
 #include <winternl.h>
-
+#include "string.c"
 
 #define BUFFER_SIZE 1024
 
-#define KERNEL32_DLL 3
-#define CURRENT_EXE 1
+// #define KERNEL32_DLL 3
+// #define CURRENT_EXE 1
 
 // #define IMAGE_BASE  ((void *)0x00007FF8827B0000) // Changes when PC is restarted (?)
 
@@ -18,7 +18,8 @@ typedef  WINBOOL  (*tWriteConsoleA) (HANDLE hConsoleOutput,CONST VOID *lpBuffer,
 
 void payload(void) __attribute__((section(".payload")));
 
-void *get_image_base(int module_serial, LIST_ENTRY *list) __attribute__((section(".payload")));
+
+void *get_image_base(wchar_t *module_name, LIST_ENTRY *list) __attribute__((section(".payload")));
 LIST_ENTRY *get_InMemoryOrderModuleList(void) __attribute__((section(".payload")));
 
 IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base) __attribute__((section(".payload")));
@@ -27,6 +28,7 @@ void *get_function(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *
 
 int compare(const char* a, const char* b) __attribute__((section(".payload")));
 size_t length(const char* str) __attribute__((section(".payload")));
+int wcompare(const wchar_t *a, const wchar_t *b) __attribute__((section(".payload")));
 
 
 int main()
@@ -43,9 +45,10 @@ void payload(void)
     char sGetStdHandle[] = "GetStdHandle";
     char sWriteConsoleA[] = "WriteConsoleA";
     const char message[] = "This is the payload!!!!!!!!!!!!!!!!!!!!!!!!"; // !: 0x21 
+    wchar_t kernel_32_name[] = L"KERNEL32.DLL";
     
     LIST_ENTRY *list = get_InMemoryOrderModuleList();
-    void *image_base = get_image_base(KERNEL32_DLL, list);
+    void *image_base = get_image_base(kernel_32_name, list);
     // ############################################## function("printf")("Hallo, world!")
     IMAGE_EXPORT_DIRECTORY *i_ex_dir = get_IMAGE_EXPORT_DIRECTORY(image_base);
     tGetStdHandle pGetStdHandle = (tGetStdHandle)get_function(sGetStdHandle, i_ex_dir, image_base);
@@ -88,45 +91,32 @@ void *get_function(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *
     return (void*)(func_rvas[ordinal[serial]] + image_base);
 }
 
-// #include <intrin.h>
-// int get_base_image() {
-//     unsigned long long tebAddress = __readgsqword(0x30); // Offset for the TEB in x64
-//     // unsigned long long stackBase = *(unsigned long long*)(tebAddress + 0x8); // Offset for the stack base in the TEB
-//     // unsigned long long stackLimit = *(unsigned long long*)(tebAddress + 0x10); // Offset for the stack limit in the TEB
-
-//     printf("TEB Address: 0x%llx\n", tebAddress);
-//     // printf("Stack Base: 0x%llx\n", stackBase);
-//     // printf("Stack Limit: 0x%llx\n", stackLimit);
-
-//     return 0;
-// }
-
-
 LIST_ENTRY *get_InMemoryOrderModuleList(void)
 {
     PEB *process_env_block = 0; 
 
     asm volatile (
-        // "movq %%gs:0x0, %[thread_env_block]\n\t"
         "movq %%gs:0x60, %[process_env_block]\n\t"
-        : [process_env_block] "=r" (process_env_block) // , [thread_env_block] "=r" (thread_env_block) 
+        : [process_env_block] "=r" (process_env_block) 
         : 
         : 
     );
-    // can't read from gs:0
+    // can't read from gs:0(thread_env_block)
 
     LIST_ENTRY *list = &(process_env_block->Ldr->InMemoryOrderModuleList);
     
     return list;
 }
 
-void *get_image_base(int module_serial, LIST_ENTRY *list)
+void *get_image_base(wchar_t *module_name, LIST_ENTRY *list)
 {
-
     for (int i = 0; i < 10; i++)
     {
         LDR_DATA_TABLE_ENTRY *entry = (LDR_DATA_TABLE_ENTRY *)((void*)list - 0x10);
-        if (i == module_serial /*KERNEL32.DLL*/) // 1: payload.exe
+
+        wchar_t *buffer = ((UNICODE_STRING*)(entry->Reserved4))->Buffer;  
+        
+        if (buffer != NULL && wcompare(module_name, buffer) == 0)
         {
             // printf("%d: ,DllBase: %X\n", i, entry->DllBase);
             // wprintf(L"%ls\n", ((UNICODE_STRING*)(entry->Reserved4))->Buffer);
@@ -136,4 +126,3 @@ void *get_image_base(int module_serial, LIST_ENTRY *list)
     }
 }
 
-#include "string.c"

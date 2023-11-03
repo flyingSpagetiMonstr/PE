@@ -7,6 +7,8 @@ function("printf")("Hallo, world!")
 VS代码生成时关闭GS选项 命令行格式：/GS
 use i_nt_headers.FileHeader.SizeOfOptionalHeader?
 
+- read pyaload.exe[.payload] to target.exe[.virus]
+
 - sizeofHeaders: The combined size of an MS-DOS stub, PE header, and section headers rounded up to a multiple of FileAlignment.
 - SizeOfCode
 - EntryPoint
