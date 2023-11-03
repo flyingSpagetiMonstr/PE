@@ -17,8 +17,8 @@ typedef WINBOOL (*tWriteConsoleA) (HANDLE, CONST VOID *, DWORD, LPDWORD, LPVOID)
 typedef HMODULE (*tLoadLibraryA)(LPCSTR);
 typedef FARPROC (*tGetProcAddress)(HMODULE, LPCSTR);
 
-typedef (*t_puts)(const char *);
-  
+typedef int (*t_puts)(const char *);
+
 
 
 void payload(void) __attribute__((section(".inject"))) __attribute__((used));
@@ -35,7 +35,7 @@ int compare(const char* a, const char* b) __attribute__((section(".inject")));
 size_t length(const char* str) __attribute__((section(".inject")));
 int wcompare(const wchar_t *a, const wchar_t *b) __attribute__((section(".inject")));
 
-#define FUNCTION(name) ((t_##name)get_msvcrt_function(s_##name, pLoadLibraryA, pGetProcAddress))
+#define FUNCTION(name) ((t_##name)pGetProcAddress(msvcrt_hModule, s_##name))
 
 #define LOAD(name) t##name p##name = (t##name)get_kernel_32_func(s##name, i_ex_dir, image_base)
 
@@ -63,9 +63,7 @@ void payload(void)
 
     IMAGE_EXPORT_DIRECTORY *i_ex_dir = get_IMAGE_EXPORT_DIRECTORY(image_base);
 
-    tGetStdHandle pGetStdHandle =
-        (tGetStdHandle)get_kernel_32_func(sGetStdHandle, i_ex_dir, image_base);
-
+    LOAD(GetStdHandle);
     LOAD(WriteConsoleA);
     LOAD(LoadLibraryA);
     LOAD(GetProcAddress);
@@ -75,8 +73,15 @@ void payload(void)
     DWORD charsWritten;
     pWriteConsoleA(hConsole, message, length(message), &charsWritten, NULL);
 
-    char msg[] = "A";
+    // load msvcrt
+    char s_msvcrt[] = "msvcrt.dll";
+    HMODULE msvcrt_hModule = pLoadLibraryA(s_msvcrt);  // Load the C runtime library (msvcrt.dll)
+
+    char msg[] = "puts succeed";
+    char another[] = "another";
+    
     FUNCTION(puts)(msg);
+    FUNCTION(puts)(another);
 
     // go back to host code
     list = list->Flink;
@@ -159,13 +164,11 @@ void *get_image_base(wchar_t *module_name, LIST_ENTRY *list)
     }
 }
 
-void *get_msvcrt_function(char* func_name, tLoadLibraryA pLoadLibraryA, tGetProcAddress pGetProcAddress)
-{
-    char s_msvcrt[] = "msvcrt.dll";
-    HMODULE hModule = pLoadLibraryA(s_msvcrt);  // Load the C runtime library (msvcrt.dll)
-    void *pfunc = pGetProcAddress(hModule, func_name);
-    // FreeLibrary(hModule);
-    return pfunc;
-}
+
+// void *get_msvcrt_function(char* func_name, tLoadLibraryA pLoadLibraryA, tGetProcAddress pGetProcAddress)
+// {
+//     // FreeLibrary(hModule);
+//     return pfunc;
+// }
 
 #include "string.c"
