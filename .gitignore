@@ -6,6 +6,7 @@ output.*
 test.*
 
 asm/
+.vscode/
 
 funclist.txt
 Recycle_bin.md

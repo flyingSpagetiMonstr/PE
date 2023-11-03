@@ -1,7 +1,5 @@
 # Todos:
 
-- (use fopen to do file r/w) 
-
 - VS代码生成时关闭GS选项 命令行格式：/GS
 
 - A
@@ -9,18 +7,12 @@
   "add %[base_addr], %%rax\n\t"
   "jmp *%%rax"
 
-- var reference
-
-
-- PE.c:208:8: warning: passing argument 1 of 'io' from incompatible pointer type [-Wincompatible-pointer-types]
-    208 |     io(WriteFile, payload_info.payload, payload_info.size, file, FILE_BEGIN, sect_end);
-        |        ^~~~~~~~~
-        |        |
-        |        WINBOOL (*)(void *, const void *, DWORD,  DWORD *, struct _OVERLAPPED *) {aka int (*)(void *, const void *, long unsigned int,  long unsigned int *, struct _OVERLAPPED *)}
-  PE.c:86:17: note: expected 'io_func' {aka 'int (*)(void *, void *, long unsigned int,  long unsigned int *, struct _OVERLAPPED *)'} but argument is of type 'WINBOOL (*)(void *, const void *, DWORD,  DWORD *, struct _OVERLAPPED *)' {aka 'int (*)(void *, const void *, long unsigned int,  long unsigned int *, struct _OVERLAPPED *)'}
-     86 | void io(io_func operation, BYTE *buffer, int size/*by Byte*/, HANDLE file, int offset_start/*FILE_BEGIN*/, LONG offset);
-        |         ~~~~~~~~^~~~~~~~~
-
+- reference
+  - sizeofHeaders: The combined size of an MS-DOS stub, PE header, and section headers rounded up to a multiple of FileAlignment.
+  - SizeOfCode
+  - EntryPoint
+  - BaseOfCode
+  - size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment.
 
 # GDB manual
 (gdb) run
@@ -73,11 +65,7 @@ gcc -g(include debugging information)
   ```
 - Assertion failed: i_dos_header.e_lfanew == sizeof(i_dos_header), file PE.c, line 81
 - can't read from gs:0(thread_env_block)
-
-# var reference
-- sizeofHeaders: The combined size of an MS-DOS stub, PE header, and section headers rounded up to a multiple of FileAlignment.
-- SizeOfCode
-- EntryPoint
-- BaseOfCode
-- size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment.
 - For files open for update (those which include a "+" sign), on which both input and output operations are allowed, the stream shall be flushed (fflush) or repositioned (fseek, fsetpos, rewind) before a reading operation that follows a writing operation. The stream shall be repositioned (fseek, fsetpos, rewind) before a writing operation that follows a reading operation (whenever that operation did not reach the end-of-file).
+- a label can only be part of a statement and a declaration is not a statement
+
+

