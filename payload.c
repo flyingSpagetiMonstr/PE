@@ -29,8 +29,6 @@ LIST_ENTRY *get_InMemoryOrderModuleList(void) __attribute__((section(".inject"))
 IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base) __attribute__((section(".inject")));
 void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base) __attribute__((section(".inject")));
 
-void *get_msvcrt_function(char* func_name, tLoadLibraryA pLoadLibraryA, tGetProcAddress pGetProcAddress) __attribute__((section(".inject")));
-
 int compare(const char* a, const char* b) __attribute__((section(".inject")));
 size_t length(const char* str) __attribute__((section(".inject")));
 int wcompare(const wchar_t *a, const wchar_t *b) __attribute__((section(".inject")));
@@ -79,7 +77,7 @@ void payload(void)
 
     char msg[] = "puts succeed";
     char another[] = "another";
-    
+
     FUNCTION(puts)(msg);
     FUNCTION(puts)(another);
 
@@ -163,12 +161,5 @@ void *get_image_base(wchar_t *module_name, LIST_ENTRY *list)
         list = list->Flink;
     }
 }
-
-
-// void *get_msvcrt_function(char* func_name, tLoadLibraryA pLoadLibraryA, tGetProcAddress pGetProcAddress)
-// {
-//     // FreeLibrary(hModule);
-//     return pfunc;
-// }
 
 #include "string.c"
