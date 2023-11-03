@@ -1,0 +1,10 @@
+*.exe
+*.bin
+
+output.*
+test.*
+
+asm/
+
+funclist.txt
+Recycle_bin.md
