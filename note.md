@@ -72,4 +72,4 @@ learn about syscall (better from sth like books)
   typedef  WINBASEAPI HANDLE WINAPI *tGetStdHandle (DWORD nStdHandle); // wrong
   ```
 - Assertion failed: i_dos_header.e_lfanew == sizeof(i_dos_header), file PE.c, line 81
--   
+- can't read from gs:0(thread_env_block)

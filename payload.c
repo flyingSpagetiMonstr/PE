@@ -19,19 +19,23 @@ typedef FARPROC (*tGetProcAddress)(HMODULE, LPCSTR);
 
 typedef int (*t_puts)(const char *);
 
+void payload(void) 
+__attribute__((section(".inject"))) __attribute__((used));
 
+void *get_image_base(wchar_t *module_name, LIST_ENTRY *list) 
+__attribute__((section(".inject")));
 
-void payload(void) __attribute__((section(".inject"))) __attribute__((used));
+IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base) 
+__attribute__((section(".inject")));
+void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base) 
+__attribute__((section(".inject")));
 
-void *get_image_base(wchar_t *module_name, LIST_ENTRY *list) __attribute__((section(".inject")));
-LIST_ENTRY *get_InMemoryOrderModuleList(void) __attribute__((section(".inject")));
-
-IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base) __attribute__((section(".inject")));
-void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base) __attribute__((section(".inject")));
-
-int compare(const char* a, const char* b) __attribute__((section(".inject")));
-size_t length(const char* str) __attribute__((section(".inject")));
-int wcompare(const wchar_t *a, const wchar_t *b) __attribute__((section(".inject")));
+int compare(const char* a, const char* b) 
+__attribute__((section(".inject")));
+size_t length(const char* str) 
+__attribute__((section(".inject")));
+int wcompare(const wchar_t *a, const wchar_t *b) 
+__attribute__((section(".inject")));
 
 #define FUNCTION(name) ((t_##name)pGetProcAddress(msvcrt_hModule, s_##name))
 
@@ -55,7 +59,14 @@ void payload(void)
     const char message[] = "This is the payload!!!!!!!!!!!!!!!!!!!!!!!!\n"; // !: 0x21 
     wchar_t kernel_32_name[] = L"KERNEL32.DLL";
     
-    LIST_ENTRY *list = get_InMemoryOrderModuleList();
+    // get_InMemoryOrderModuleList
+    LIST_ENTRY *list = 0;
+    {
+        PEB *peb = 0; 
+        asm volatile ("movq %%gs:0x60, %0":"=r" (peb));
+        list = &(peb->Ldr->InMemoryOrderModuleList);
+    }
+    
     void *image_base = get_image_base(kernel_32_name, list);
     // ############################################## function("printf")("Hallo, world!")
 
@@ -125,23 +136,6 @@ void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, 
     DWORD *func_rvas = (DWORD*)(i_ex_dir->AddressOfFunctions + image_base);
 
     return (void*)(func_rvas[ordinal[serial]] + image_base);
-}
-
-LIST_ENTRY *get_InMemoryOrderModuleList(void)
-{
-    PEB *process_env_block = 0; 
-
-    asm volatile (
-        "movq %%gs:0x60, %[process_env_block]\n\t"
-        : [process_env_block] "=r" (process_env_block) 
-        : 
-        : 
-    );
-    // can't read from gs:0(thread_env_block)
-
-    LIST_ENTRY *list = &(process_env_block->Ldr->InMemoryOrderModuleList);
-    
-    return list;
 }
 
 void *get_image_base(wchar_t *module_name, LIST_ENTRY *list)
