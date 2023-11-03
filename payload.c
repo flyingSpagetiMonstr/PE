@@ -17,6 +17,9 @@ typedef WINBOOL (*tWriteConsoleA) (HANDLE, CONST VOID *, DWORD, LPDWORD, LPVOID)
 typedef HMODULE (*tLoadLibraryA)(LPCSTR);
 typedef FARPROC (*tGetProcAddress)(HMODULE, LPCSTR);
 
+typedef (*t_puts)(const char *);
+  
+
 
 void payload(void) __attribute__((section(".inject"))) __attribute__((used));
 
@@ -32,7 +35,8 @@ int compare(const char* a, const char* b) __attribute__((section(".inject")));
 size_t length(const char* str) __attribute__((section(".inject")));
 int wcompare(const wchar_t *a, const wchar_t *b) __attribute__((section(".inject")));
 
-#define FUNCTION(func_name) get_msvcrt_function(func_name, pLoadLibraryA, pGetProcAddress)
+#define FUNCTION(name) ((t_##name)get_msvcrt_function(s_##name, pLoadLibraryA, pGetProcAddress))
+
 #define LOAD(name) t##name p##name = (t##name)get_kernel_32_func(s##name, i_ex_dir, image_base)
 
 int main()
@@ -45,9 +49,10 @@ void payload(void)
 {
     char sGetStdHandle[] = "GetStdHandle";
     char sWriteConsoleA[] = "WriteConsoleA";
-
     char sLoadLibraryA[] = "LoadLibraryA";
     char sGetProcAddress[] = "GetProcAddress";
+
+    char s_puts[] = "puts";
 
     const char message[] = "This is the payload!!!!!!!!!!!!!!!!!!!!!!!!\n"; // !: 0x21 
     wchar_t kernel_32_name[] = L"KERNEL32.DLL";
@@ -60,8 +65,6 @@ void payload(void)
 
     tGetStdHandle pGetStdHandle =
         (tGetStdHandle)get_kernel_32_func(sGetStdHandle, i_ex_dir, image_base);
-    // tWriteConsoleA pWriteConsoleA = 
-    //     (tWriteConsoleA)get_kernel_32_func(sWriteConsoleA, i_ex_dir, image_base);
 
     LOAD(WriteConsoleA);
     LOAD(LoadLibraryA);
@@ -71,6 +74,9 @@ void payload(void)
     HANDLE hConsole = pGetStdHandle(STD_OUTPUT_HANDLE);
     DWORD charsWritten;
     pWriteConsoleA(hConsole, message, length(message), &charsWritten, NULL);
+
+    char msg[] = "A";
+    FUNCTION(puts)(msg);
 
     // go back to host code
     list = list->Flink;
