@@ -44,6 +44,7 @@
 gcc -g(include debugging information)
 
 # Qustions 
+- diff between fopen and CreateFile(mechanism, not only usage)
 - Will the compiler optimize this code so that i_nt_headers.FileHeader.NumberOfSections gets loaded into register instead of reading memory every time?
   ```c
   for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
@@ -79,3 +80,4 @@ gcc -g(include debugging information)
 - EntryPoint
 - BaseOfCode
 - size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment.
+- For files open for update (those which include a "+" sign), on which both input and output operations are allowed, the stream shall be flushed (fflush) or repositioned (fseek, fsetpos, rewind) before a reading operation that follows a writing operation. The stream shall be repositioned (fseek, fsetpos, rewind) before a writing operation that follows a reading operation (whenever that operation did not reach the end-of-file).

