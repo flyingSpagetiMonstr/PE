@@ -15,6 +15,15 @@ use i_nt_headers.FileHeader.SizeOfOptionalHeader?
 - BaseOfCode
 - size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment.
 
+- PE.c:208:8: warning: passing argument 1 of 'io' from incompatible pointer type [-Wincompatible-pointer-types]
+    208 |     io(WriteFile, payload_info.payload, payload_info.size, file, FILE_BEGIN, sect_end);
+        |        ^~~~~~~~~
+        |        |
+        |        WINBOOL (*)(void *, const void *, DWORD,  DWORD *, struct _OVERLAPPED *) {aka int (*)(void *, const void *, long unsigned int,  long unsigned int *, struct _OVERLAPPED *)}
+  PE.c:86:17: note: expected 'io_func' {aka 'int (*)(void *, void *, long unsigned int,  long unsigned int *, struct _OVERLAPPED *)'} but argument is of type 'WINBOOL (*)(void *, const void *, DWORD,  DWORD *, struct _OVERLAPPED *)' {aka 'int (*)(void *, const void *, long unsigned int,  long unsigned int *, struct _OVERLAPPED *)'}
+     86 | void io(io_func operation, BYTE *buffer, int size/*by Byte*/, HANDLE file, int offset_start/*FILE_BEGIN*/, LONG offset);
+        |         ~~~~~~~~^~~~~~~~~
+
 
 # GDB manual
 (gdb) run
@@ -62,3 +71,5 @@ learn about syscall (better from sth like books)
   typedef  WINBASEAPI HANDLE WINAPI (*tGetStdHandle) (DWORD nStdHandle); // correct
   typedef  WINBASEAPI HANDLE WINAPI *tGetStdHandle (DWORD nStdHandle); // wrong
   ```
+- Assertion failed: i_dos_header.e_lfanew == sizeof(i_dos_header), file PE.c, line 81
+-   

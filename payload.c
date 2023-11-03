@@ -4,7 +4,6 @@
 #include <string.h>
 #include <Windows.h>
 #include <winternl.h>
-#include "string.c"
 
 #define BUFFER_SIZE 1024
 
@@ -13,23 +12,28 @@
 
 // #define IMAGE_BASE  ((void *)0x00007FF8827B0000) // Changes when PC is restarted (?)
 
-typedef  HANDLE  (*tGetStdHandle) (DWORD nStdHandle);
-typedef  WINBOOL  (*tWriteConsoleA) (HANDLE hConsoleOutput,CONST VOID *lpBuffer,DWORD nNumberOfCharsToWrite,LPDWORD lpNumberOfCharsWritten,LPVOID lpReserved);
-
-void payload(void) __attribute__((section(".payload")));
-
-
-void *get_image_base(wchar_t *module_name, LIST_ENTRY *list) __attribute__((section(".payload")));
-LIST_ENTRY *get_InMemoryOrderModuleList(void) __attribute__((section(".payload")));
-
-IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base) __attribute__((section(".payload")));
-void *get_function(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base) __attribute__((section(".payload")));
+typedef HANDLE (*tGetStdHandle) (DWORD);
+typedef WINBOOL (*tWriteConsoleA) (HANDLE, CONST VOID *, DWORD, LPDWORD, LPVOID);
+typedef HMODULE (*tLoadLibraryA)(LPCSTR);
+typedef FARPROC (*tGetProcAddress)(HMODULE, LPCSTR);
 
 
-int compare(const char* a, const char* b) __attribute__((section(".payload")));
-size_t length(const char* str) __attribute__((section(".payload")));
-int wcompare(const wchar_t *a, const wchar_t *b) __attribute__((section(".payload")));
+void payload(void) __attribute__((section(".inject"))) __attribute__((used));
 
+void *get_image_base(wchar_t *module_name, LIST_ENTRY *list) __attribute__((section(".inject")));
+LIST_ENTRY *get_InMemoryOrderModuleList(void) __attribute__((section(".inject")));
+
+IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base) __attribute__((section(".inject")));
+void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base) __attribute__((section(".inject")));
+
+void *get_msvcrt_function(char* func_name, tLoadLibraryA pLoadLibraryA, tGetProcAddress pGetProcAddress) __attribute__((section(".inject")));
+
+int compare(const char* a, const char* b) __attribute__((section(".inject")));
+size_t length(const char* str) __attribute__((section(".inject")));
+int wcompare(const wchar_t *a, const wchar_t *b) __attribute__((section(".inject")));
+
+#define FUNCTION(func_name) get_msvcrt_function(func_name, pLoadLibraryA, pGetProcAddress)
+#define LOAD(name) t##name p##name = (t##name)get_kernel_32_func(s##name, i_ex_dir, image_base)
 
 int main()
 {
@@ -37,27 +41,50 @@ int main()
     return 0;
 }
 
-// #pragma code_seg (".payload")
-
 void payload(void)
 {
-
     char sGetStdHandle[] = "GetStdHandle";
     char sWriteConsoleA[] = "WriteConsoleA";
-    const char message[] = "This is the payload!!!!!!!!!!!!!!!!!!!!!!!!"; // !: 0x21 
+
+    char sLoadLibraryA[] = "LoadLibraryA";
+    char sGetProcAddress[] = "GetProcAddress";
+
+    const char message[] = "This is the payload!!!!!!!!!!!!!!!!!!!!!!!!\n"; // !: 0x21 
     wchar_t kernel_32_name[] = L"KERNEL32.DLL";
     
     LIST_ENTRY *list = get_InMemoryOrderModuleList();
     void *image_base = get_image_base(kernel_32_name, list);
     // ############################################## function("printf")("Hallo, world!")
+
     IMAGE_EXPORT_DIRECTORY *i_ex_dir = get_IMAGE_EXPORT_DIRECTORY(image_base);
-    tGetStdHandle pGetStdHandle = (tGetStdHandle)get_function(sGetStdHandle, i_ex_dir, image_base);
-    tWriteConsoleA pWriteConsoleA = (tWriteConsoleA)get_function(sWriteConsoleA, i_ex_dir, image_base);
+
+    tGetStdHandle pGetStdHandle =
+        (tGetStdHandle)get_kernel_32_func(sGetStdHandle, i_ex_dir, image_base);
+    // tWriteConsoleA pWriteConsoleA = 
+    //     (tWriteConsoleA)get_kernel_32_func(sWriteConsoleA, i_ex_dir, image_base);
+
+    LOAD(WriteConsoleA);
+    LOAD(LoadLibraryA);
+    LOAD(GetProcAddress);
 
     // prt
     HANDLE hConsole = pGetStdHandle(STD_OUTPUT_HANDLE);
     DWORD charsWritten;
     pWriteConsoleA(hConsole, message, length(message), &charsWritten, NULL);
+
+    // go back to host code
+    list = list->Flink;
+    void *current_image_base = *((void**)((void*)list + 0x20));
+
+    asm volatile (
+        "mov $0x14E0, %%rax\n\t"
+        "add %[base_addr], %%rax\n\t"
+        "jmp *%%rax"
+        : 
+        : [base_addr] "r" (current_image_base) 
+        : "rax"
+    );
+
 }
 
 IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base)
@@ -71,7 +98,7 @@ IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base)
     return EX_VA;
 }
 
-void *get_function(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base)
+void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base)
 {
     DWORD *name_table = (DWORD*)(i_ex_dir->AddressOfNames + image_base);
 
@@ -115,7 +142,7 @@ void *get_image_base(wchar_t *module_name, LIST_ENTRY *list)
         LDR_DATA_TABLE_ENTRY *entry = (LDR_DATA_TABLE_ENTRY *)((void*)list - 0x10);
 
         wchar_t *buffer = ((UNICODE_STRING*)(entry->Reserved4))->Buffer;  
-        
+
         if (buffer != NULL && wcompare(module_name, buffer) == 0)
         {
             // printf("%d: ,DllBase: %X\n", i, entry->DllBase);
@@ -126,3 +153,13 @@ void *get_image_base(wchar_t *module_name, LIST_ENTRY *list)
     }
 }
 
+void *get_msvcrt_function(char* func_name, tLoadLibraryA pLoadLibraryA, tGetProcAddress pGetProcAddress)
+{
+    char s_msvcrt[] = "msvcrt.dll";
+    HMODULE hModule = pLoadLibraryA(s_msvcrt);  // Load the C runtime library (msvcrt.dll)
+    void *pfunc = pGetProcAddress(hModule, func_name);
+    // FreeLibrary(hModule);
+    return pfunc;
+}
+
+#include "string.c"

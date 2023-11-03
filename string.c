@@ -1,4 +1,5 @@
 #include <wchar.h>
+// must be included at end of payload.c
 
 // these string oprations don't handle NULL pointers 
 

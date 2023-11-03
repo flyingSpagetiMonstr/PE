@@ -1,5 +1,6 @@
 *.exe
 *.bin
+*.asm
 
 output.*
 test.*
@@ -8,3 +9,5 @@ asm/
 
 funclist.txt
 Recycle_bin.md
+
+# payload.exe[.payload]
