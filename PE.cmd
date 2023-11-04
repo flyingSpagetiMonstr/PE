@@ -22,7 +22,8 @@ copy test.exe test\
 
 cd test\
 rmdir v_folder /s /q
+
 %name%-target.exe
 
 void.exe
-test.exe
+@REM test.exe

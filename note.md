@@ -16,11 +16,11 @@
   "add %[base_addr], %%rax\n\t"
   "jmp *%%rax"
 - reference
-  - sizeofHeaders: The combined size of an MS-DOS stub, PE header, and section headers rounded up to a multiple of FileAlignment.
-  - SizeOfCode
-  - EntryPoint
-  - BaseOfCode
-  - size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment.
+  <!-- - sizeofHeaders: The combined size of an MS-DOS stub, PE header, and section headers rounded up to a multiple of FileAlignment. -->
+  - SizeOfCode 
+  <!-- - EntryPoint -->
+  <!-- - BaseOfCode -->
+  <!-- - size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment. -->
 
 # GDB manual
 (gdb) run
@@ -77,4 +77,6 @@ gcc -g(include debugging information)
 - For files open for update (those which include a "+" sign), on which both input and output operations are allowed, the stream shall be flushed (fflush) or repositioned (fseek, fsetpos, rewind) before a reading operation that follows a writing operation. The stream shall be repositioned (fseek, fsetpos, rewind) before a writing operation that follows a reading operation (whenever that operation did not reach the end-of-file).
 - a label can only be part of a statement and a declaration is not a statement
 - Put similar codes together, tightly.
+- content of char *target(findFileData.cFileName) dies(become all zero) after fseek().
+- 
 

@@ -3,17 +3,17 @@ set name=PE-bear
 
 cd /d %~dp0
 
-copy %name%-bakup.exe test\%name%.exe
+copy adv_test\%name%-bakup.exe adv_test\%name%.exe
 
 gcc PE.c -o PE
 
 gcc payload.c -o payload.exe
 
-PE test\%name%.exe
+PE adv_test\%name%.exe
 
 @REM PAUSE
 
 @REM %name%-target.exe
 
-test\%name%.exe
+adv_test\%name%.exe
 
