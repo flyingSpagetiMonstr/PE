@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
     // SetFilePointer(host, i_dos_header.e_lfanew + sizeof(i_nt_headers), NULL, FILE_BEGIN);
     for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
     {
-        puts(i_sect_header.Name);
+        // puts(i_sect_header.Name);
     }
 
 // write payload

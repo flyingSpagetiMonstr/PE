@@ -1,12 +1,14 @@
+# Always check string literals
+- 09.41
+- 10.28
+
+
 # Todos:
-
 - VS代码生成时关闭GS选项 命令行格式：/GS
-
 - A
   "mov $0x14E0, %%rax\n\t"
   "add %[base_addr], %%rax\n\t"
   "jmp *%%rax"
-
 - reference
   - sizeofHeaders: The combined size of an MS-DOS stub, PE header, and section headers rounded up to a multiple of FileAlignment.
   - SizeOfCode
@@ -49,6 +51,7 @@ gcc -g(include debugging information)
   // ->
   typedef  HANDLE  (*tGetStdHandle) (DWORD nStdHandle);
   ```
+- calling CopyFileA will cause the original program can't exit(?) normally. (The program get stuck after running the host codes).
 
 # Stalled
 - use i_nt_headers.FileHeader.SizeOfOptionalHeader(?)

