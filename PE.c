@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
 }
 
 #define PAYLOAD_FILE_NAME "payload.exe"
-#define PAYLOAD_SECT_NAME ".inject"
+#define PAYLOAD_SECT_NAME V_SECT_NAME
 
 payload_info_t get_payload()
 {

