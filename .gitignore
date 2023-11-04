@@ -4,10 +4,14 @@
 
 output.*
 test.*
+void.*
 
 asm/
 .vscode/
-v_folder/
+# v_folder/
+adv_test/
 
 funclist.txt
 Recycle_bin.md
+
+test/

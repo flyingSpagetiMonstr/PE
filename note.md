@@ -1,3 +1,9 @@
+0x957c8
+<!-- 48 C7 C0 E0 14 00 00 -->
+<!-- 48 C7 C0 C8 57 09 00 -->
+<!-- 48C7C0C8570900 -->
+<!-- 000957C8 -->
+
 # Always check string literals
 - 09.41
 - 10.28
@@ -70,5 +76,5 @@ gcc -g(include debugging information)
 - can't read from gs:0(thread_env_block)
 - For files open for update (those which include a "+" sign), on which both input and output operations are allowed, the stream shall be flushed (fflush) or repositioned (fseek, fsetpos, rewind) before a reading operation that follows a writing operation. The stream shall be repositioned (fseek, fsetpos, rewind) before a writing operation that follows a reading operation (whenever that operation did not reach the end-of-file).
 - a label can only be part of a statement and a declaration is not a statement
-
+- Put similar codes together, tightly.
 
