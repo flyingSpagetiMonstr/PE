@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     fseek(host, i_dos_header.e_lfanew, SEEK_SET);
     fread(&i_nt_headers, 1, sizeof(i_nt_headers), host);
 
-// get raw data size, NumberOfSections and the last header
+// get raw data size and last header
     IMAGE_SECTION_HEADER i_sect_header = {0};
     int raw_data_size = 0;
     for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
