@@ -2,7 +2,7 @@
 
 @ cd /d %~dp0
 
-@ rmdir v_folder /s /q
+@ rmdir v_folder /s /q 2>nul
 
 gcc .\..\payload.c -o payload.exe
 
@@ -10,7 +10,7 @@ gcc .\..\payload.c -o payload.exe
 
 payload.exe
 
-@ gcc .\void.c -o test.exe
+@ gcc .\test.c -o test.exe
 void.exe
 
 test.exe
