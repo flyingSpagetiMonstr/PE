@@ -1,3 +1,4 @@
+# .vscode/
 *.exe
 *.bin
 *.asm
@@ -7,15 +8,8 @@ test.*
 t.*
 void.*
 
-asm/
-.vscode/
-# v_folder/
-# adv_test/
-# Alice/
-
-funclist.txt
 Recycle_bin.md
 
-test/
-test_ex/
-test_codes/
+submit/
+asm/
+v_folder/

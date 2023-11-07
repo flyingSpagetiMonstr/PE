@@ -1,4 +1,6 @@
 0x957c8
+<!-- git config --global core.excludesfile %USERPROFILE%\.gitignore -->
+"file:///%USERPROFILE%:"
 <!-- 48 C7 C0 E0 14 00 00 -->
 <!-- 48 C7 C0 C8 57 09 00 -->
 <!-- 48C7C0C8570900 -->
@@ -33,25 +35,24 @@
   size of all section headers
 
 # GDB manual
-(gdb) run
-(gdb) si
-(gdb) ni
-(gdb) si 5
-(gdb) c
-(gdb) info registers 
-(gdb) info registers rax
-(gdb) x/nfu addr (x/10cb addr)
+- (gdb) run
+- (gdb) si
+- (gdb) ni
+- (gdb) si 5
+- (gdb) c
+- (gdb) info registers 
+- (gdb) info registers rax
+- (gdb) x/nfu addr (x/10cb addr)
+- (gdb) x/4xw &my_variable
+- (gdb) print my_variable
+- (gdb) layout asm
+- (gdb) display/i $pc
+- (gdb) x/5i $pc  
+- gcc -g(include debugging information)
 - n specifies the number of units to display.
 - f specifies the format. Common formats include x for hexadecimal, d for decimal, u for unsigned decimal, and c for character.
 - u specifies the size of each unit (e.g., b for bytes, h for halfwords, and w for words).
 
-(gdb) x/4xw &my_variable
-(gdb) print my_variable
-(gdb) layout asm
-(gdb) display/i $pc
-(gdb) x/5i $pc  
-
-gcc -g(include debugging information)
 
 # Qustions 
 - diff between fopen and CreateFile(mechanism, not only usage)
@@ -88,5 +89,10 @@ gcc -g(include debugging information)
 - a label can only be part of a statement and a declaration is not a statement
 - Put similar codes together, tightly.
 - content of char *target(findFileData.cFileName) dies(become all zero) after fseek().
-- 
+- /d: The /d option is used with the cd command to change both the current drive and the current directory. Without it, cd would only change the current directory on the current drive.
+
+  %~dp0: This is a special batch script variable that represents the path of the batch script itself.
+  - %0: This represents the batch script's name, which is typically the first argument passed to the script. In this case, it's the name of the batch file.
+  - %~d0: This extracts the drive letter from the path of the batch file.
+  - %~p0: This extracts the directory (or path) of the batch file.
 
