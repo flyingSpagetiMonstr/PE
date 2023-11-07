@@ -15,6 +15,5 @@ void.exe
 
 test.exe
 
-@ del payload.exe
 @ del void.exe
 @ del test.exe
