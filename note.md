@@ -1,15 +1,4 @@
-0x957c8
-<!-- git config --global core.excludesfile %USERPROFILE%\.gitignore -->
-"file:///%USERPROFILE%:"
-<!-- 48 C7 C0 E0 14 00 00 -->
-<!-- 48 C7 C0 C8 57 09 00 -->
-<!-- 48C7C0C8570900 -->
-<!-- 000957C8 -->
-
 # Always check string literals
-- 09.41
-- 10.28
-
 
 # Todos:
 - VS代码生成时关闭GS选项 命令行格式：/GS
@@ -95,4 +84,4 @@
   - %0: This represents the batch script's name, which is typically the first argument passed to the script. In this case, it's the name of the batch file.
   - %~d0: This extracts the drive letter from the path of the batch file.
   - %~p0: This extracts the directory (or path) of the batch file.
-
+- https://sebastiandedeyne.com/setting-up-a-global-gitignore-file/
