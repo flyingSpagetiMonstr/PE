@@ -1,14 +1,9 @@
 # Always check string literals
 
 # Todos:
-- VS代码生成时关闭GS选项 命令行格式：/GS
-- A
-  "mov $0x14E0, %%rax\n\t"
-  "add %[base_addr], %%rax\n\t"
-  "jmp *%%rax"
 - reference
   <!-- - sizeofHeaders: The combined size of an MS-DOS stub, PE header, and section headers rounded up to a multiple of FileAlignment. -->
-  - SizeOfCode 
+  <!-- - SizeOfCode  -->
   <!-- - EntryPoint -->
   <!-- - BaseOfCode -->
   <!-- - size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment. -->
@@ -85,3 +80,5 @@
   - %~d0: This extracts the drive letter from the path of the batch file.
   - %~p0: This extracts the directory (or path) of the batch file.
 - https://sebastiandedeyne.com/setting-up-a-global-gitignore-file/
+- git update-index --assume-unchanged <file-path>
+- system() takes route of current cmd instead of the position of .exe file as "."
