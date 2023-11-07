@@ -17,17 +17,13 @@
 1. after enterting `payload()`, it fistly gets the address of kernel32.dll (in memory) and retrieve function addresses from there. 
 2. load msvcrt.dll. 
 3. puts a test message `"_|Hallo|_"`. 
-4. do `task1()`
+4. do [`task1()`](#task1)
+5. do [`infect()`](#infect) // task2 of the assignment
 
 - all infected executables will do the functions of payload.exe first and then goto its original entrypoint.
 
-
-
 **********************************************************
 ### task1
-- Create a folder and mov
-
-___
-You can jump to [My Section](#my-section) in this document.
-### My-Section 
-
+- Search .txt file under current directory and randomly select one. 
+- Create a folder and copy the selected .txt file into it (the name of new file is macro `NAME_OF_NEW_FILE`).
+### infect
