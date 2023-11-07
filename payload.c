@@ -288,8 +288,8 @@ inject:{
         RET(inject);
     }
 
-    char format[] = "injecting to: %s\n";
-    FUNCTION(printf)(format, target);
+    char format[] = "injecting to: %s";
+    FUNCTION(printf)(format, target); // seems that target contains '\n' already.
 
     // ADDING new section header: 
     int sect_start = position + space;  // start of original (host) codes

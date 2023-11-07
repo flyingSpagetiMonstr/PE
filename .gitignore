@@ -6,10 +6,12 @@
 output.*
 test.*
 t.*
-void.*
 
+void.exe
 Recycle_bin.md
 
 submit/
 asm/
 v_folder/
+
+# git update-index --assume-unchanged "note.md"

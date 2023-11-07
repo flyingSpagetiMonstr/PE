@@ -1,4 +1,4 @@
-@ REM ignore hallo_welt-target.exe
+@ REM inject to void.exe and run void.exe 
 
 @ cd /d %~dp0
 
@@ -6,13 +6,14 @@
 
 gcc .\..\payload.c -o payload.exe
 
-@ gcc .\test.c -o test.exe
+@ gcc .\void.c -o void.exe
+
 payload.exe
 
-@ gcc .\void.c -o void.exe
-test.exe
-
+@ gcc .\void.c -o test.exe
 void.exe
+
+test.exe
 
 @ del payload.exe
 @ del void.exe
