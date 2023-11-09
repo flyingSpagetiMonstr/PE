@@ -249,10 +249,11 @@ inject:{
     char mode[] = "rb+";
     FILE *host = FUNCTION(fopen)(target, mode);
 
+    // if the target is the .exe file of the current(running) process, fopen will fail. 
     if(host == NULL) {
         FUNCTION(fclose)(host);
         RET(inject);
-    }
+    } 
 
     // get nt_header
     IMAGE_DOS_HEADER i_dos_header = {0};
@@ -266,7 +267,7 @@ inject:{
     int raw_data_size = 0;
 
     // int injectable = 1;
-    int injectable = (i_nt_headers.OptionalHeader.Magic == 0x020B);
+    int injectable = (i_nt_headers.OptionalHeader.Magic == 0x020B); // PE+, 64-bit
     for (int i = 0; i < i_nt_headers.FileHeader.NumberOfSections; i++)
     {
         FUNCTION(fread)(&i_sect_header, 1, sizeof(i_sect_header), host);
