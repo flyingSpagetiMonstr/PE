@@ -6,7 +6,7 @@
 
 ## Manual
 - requirements: gcc version 9.2.0 (x86_64-w64-mingw32)
-- run payload.cmd to compile and run example. 
+- run others/payload.cmd to compile and run example. 
 - toggle `#define DO_TASK1 0` to determine whether to perform task1 or not. 
 
 ## How it works 
