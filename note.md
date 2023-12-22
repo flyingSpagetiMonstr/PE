@@ -7,8 +7,6 @@
   <!-- - EntryPoint -->
   <!-- - BaseOfCode -->
   <!-- - size of the image: The size (in bytes) of the image, including all headers, as the image is loaded in memory. It must be a multiple of SectionAlignment. -->
-- check all headers to define whether its infected or not
-- file routes in payload.c depands on current cmd route.
 - freopen stdout > NUL (?)
 - SizeOfHeaders
   The combined size of the following items, rounded to a multiple of the value specified in the FileAlignment member.
@@ -17,13 +15,15 @@
   size of IMAGE_FILE_HEADER
   size of optional header
   size of all section headers
+- how win PE loaders check if PE is valid
+- (file routes in payload.c depands on current cmd route.)
 
 # GDB manual
 - (gdb) run
 - (gdb) si
 - (gdb) ni
 - (gdb) si 5
-- (gdb) c
+- (gdb) c /continue
 - (gdb) info registers 
 - (gdb) info registers rax
 - (gdb) x/nfu addr (x/10cb addr)
